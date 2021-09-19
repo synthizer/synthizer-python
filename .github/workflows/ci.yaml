@@ -4,7 +4,6 @@ on:
 
 jobs:
   ubuntu:
-    if: 'false'
     runs-on: ${{matrix.os}}
     env:
       PYVERSIONS: ${{matrix.pyversions}}
