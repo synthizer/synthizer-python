@@ -27,6 +27,6 @@ is nonzero.
 $pyversions = "3.9", "3.8", "3.7", "3.6"
 
 foreach ($pyversion in $pyversions) {
-	invoke-utility py -$pyversion-$ENv:CI_ARCH -m pip install cython setuptools wheel
+	invoke-utility py -$pyversion-$ENv:CI_ARCH -m pip install cython setuptools wheel scikit-build
 	invoke-utility py -$pyversion-$Env:CI_ARCH setup.py bdist_wheel
 }
