@@ -1,0 +1,3 @@
+[submodule "synthizer-c"]
+	path = synthizer-c
+	url = https://github.com/synthizer/synthizer
