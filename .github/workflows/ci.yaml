@@ -85,8 +85,9 @@ jobs:
         python synthizer-c/vendor.py synthizer-vendored
         virtualenv -p python3.9 ./venvs/python3.9
         source venvs/python3.9/bin/activate
-        pip install -U cython wheel
-        python setup.py sdist
+        pip install -U cython wheel scikit-build
+        # Don't build Synthizer just to get an sdist.
+        CI_SDIST=1 python setup.py sdist
         deactivate
         # Now try to build it, to make sure vendoring worked out.
         virtualenv -p python3.9 ./venvs/python3.9-test

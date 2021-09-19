@@ -27,25 +27,28 @@ from skbuild import cmaker
 root_dir = os.path.split(os.path.abspath(__file__))[0]
 vendored_dir = os.path.join(root_dir, "synthizer-vendored")
 os.chdir(root_dir)
-# Configure and build Synthizer itself.
-cmake = cmaker.CMaker()
-# Force Ninja on all platforms. This lets us work on Windows reliably if run
-# from an MSVC shell, where reliably means fail noisily and obviously at the
-# beginning if the world is insane.
-cmake.configure(
-    cmake_source_dir=vendored_dir,
-    generator_name="Ninja",
-    clargs=[
-        "-DCMAKE_BUILD_TYPE=Release",
-        "-DCMAKE_MSVC_RUNTIME_LIBRARY=MultiThreaded",
-        "-DCMAKE_POSITION_INDEPENDENT_CODE=TRUE",
-    ],
-)
-cmake.make()
-# what actually happens here is that Synthizer only installs one path. It is
-# unfortunately the case that skbuild is making architecture specific
-# directories so, instead of guessing, just grab it.
-synthizer_lib_dir = os.path.split(os.path.abspath(cmake.install()[0]))[0]
+
+synthizer_lib_dir = ""
+if 'CI_SDIST' not in os.environ:
+    # Configure and build Synthizer itself.
+    cmake = cmaker.CMaker()
+    # Force Ninja on all platforms. This lets us work on Windows reliably if run
+    # from an MSVC shell, where reliably means fail noisily and obviously at the
+    # beginning if the world is insane.
+    cmake.configure(
+        cmake_source_dir=vendored_dir,
+        generator_name="Ninja",
+        clargs=[
+            "-DCMAKE_BUILD_TYPE=Release",
+            "-DCMAKE_MSVC_RUNTIME_LIBRARY=MultiThreaded",
+            "-DCMAKE_POSITION_INDEPENDENT_CODE=TRUE",
+        ],
+    )
+    cmake.make()
+    # what actually happens here is that Synthizer only installs one path. It is
+    # unfortunately the case that skbuild is making architecture specific
+    # directories so, instead of guessing, just grab it.
+    synthizer_lib_dir = os.path.split(os.path.abspath(cmake.install()[0]))[0]
 extension_args = {
     "include_dirs": [os.path.join(vendored_dir, "include")],
     "library_dirs": [synthizer_lib_dir],
