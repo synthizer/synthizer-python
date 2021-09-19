@@ -22,6 +22,7 @@ jobs:
         name: python-wheels-linux
         path: dist/*
     strategy:
+      fail-fast: true
       matrix:
         include:
           - os: ubuntu-20.04
@@ -55,7 +56,6 @@ jobs:
       shell: powershell
       run: |
         set-location $Env:GITHUB_WORKSPACE
-        python synthizer-c/vendor.py synthizer-vendored
         ./ci/build_python.ps1
     - name: Upload Artifacts
       uses: actions/upload-artifact@v2
@@ -66,6 +66,7 @@ jobs:
       fail-fast: true
       matrix:
         CI_ARCH: ['32', '64']
+        PYVERSION: ["3.9", "3.8", "3.7", "3.6"]
 
   python_sdist:
     runs-on: ubuntu-20.04
