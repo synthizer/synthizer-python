@@ -24,7 +24,6 @@ is nonzero.
   if ($LASTEXITCODE) { Throw "$exe indicated failure (exit code $LASTEXITCODE; full command: $Args)." }
 }
 
-invoke-utility py -$Env:PYVERSION-$ENv:CI_ARCH -m pip install cython setuptools wheel scikit-build
-invoke-utility py -$env:PYVERSION-$ENv:CI_ARCH synthizer-c/vendor.py synthizer-vendored
+invoke-utility py -$Env:PYVERSION-$Env:CI_ARCH -m pip install cython setuptools wheel scikit-build
+invoke-utility py -$Env:PYVERSION-$Env:CI_ARCH synthizer-c/vendor.py synthizer-vendored
 invoke-utility py -$Env:PYVERSION-$Env:CI_ARCH setup.py bdist_wheel
-

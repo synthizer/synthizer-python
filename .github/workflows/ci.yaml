@@ -4,6 +4,7 @@ on:
 
 jobs:
   ubuntu:
+    if: 'false'
     runs-on: ${{matrix.os}}
     env:
       PYVERSIONS: ${{matrix.pyversions}}
@@ -35,6 +36,7 @@ jobs:
     env:
       CI_ARCH: ${{matrix.CI_ARCH}}
       CI_WINDOWS: "1"
+      PYVERSION: ${{matrix.PYVERSION}}
     steps:
     - name: Checkout
       uses: actions/checkout@v2
