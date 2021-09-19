@@ -20,7 +20,7 @@ mkdir -p venvs
 for py in $PYVERSIONS; do
     virtualenv -p $py ./venvs/$py
     source venvs/$py/bin/activate
-    pip install -U cython wheel
+    pip install -U cython wheel scikit-build
     python synthizer-c/vendor.py synthizer-vendored
     python setup.py bdist_wheel
     deactivate
