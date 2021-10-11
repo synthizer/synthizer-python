@@ -625,7 +625,7 @@ cdef class StreamingGenerator(Generator):
         path = _to_bytes(path)
         protocol = _to_bytes(protocol)
         ctx = context._get_handle_checked(Context)
-        _checked(syz_createStreamingGeneratorFromStreamParams(&out, ctx, protocol, path, NULL, NULL, NULL))
+        _checked(syz_createStreamingGeneratorFromStreamParams(&out, ctx, protocol, path, NULL, NULL, NULL, NULL))
         return StreamingGenerator(out)
 
     @staticmethod
@@ -635,14 +635,14 @@ cdef class StreamingGenerator(Generator):
         cdef syz_Handle out
         path = _to_bytes(path)
         ctx = context._get_handle_checked(Context)
-        _checked(syz_createStreamingGeneratorFromFile(&out, ctx, path, NULL, NULL))
+        _checked(syz_createStreamingGeneratorFromFile(&out, ctx, path, NULL, NULL, NULL))
         return StreamingGenerator(out)
 
 
     @staticmethod
     def from_stream_handle(Context context, StreamHandle stream):
         cdef syz_Handle handle
-        _checked(syz_createStreamingGeneratorFromStreamHandle(&handle, context.handle, stream.handle, NULL, NULL))
+        _checked(syz_createStreamingGeneratorFromStreamHandle(&handle, context.handle, stream.handle, NULL, NULL, NULL))
         return StreamingGenerator(_handle=handle)
 
     playback_position = DoubleProperty(SYZ_P_PLAYBACK_POSITION)
@@ -668,14 +668,14 @@ cdef class DirectSource(Source) :
     def __init__(self, context):
         cdef syz_Handle ctx = context._get_handle_checked(Context)      
         cdef syz_Handle out
-        _checked(syz_createDirectSource(&out, ctx, NULL, NULL))
+        _checked(syz_createDirectSource(&out, ctx, NULL, NULL, NULL))
         super().__init__(out)
 
 cdef class AngularPannedSource(Source):
     def __init__(self, context, panner_strategy = PannerStrategy.DELEGATE, azimuth=0.0, elevation=0.0):
         cdef syz_Handle ctx = context._get_handle_checked(Context)      
         cdef syz_Handle out
-        _checked(syz_createAngularPannedSource(&out, ctx, panner_strategy.value, azimuth, elevation, NULL, NULL))
+        _checked(syz_createAngularPannedSource(&out, ctx, panner_strategy.value, azimuth, elevation, NULL, NULL, NULL))
         super().__init__(out)
 
     azimuth = DoubleProperty(SYZ_P_AZIMUTH)
@@ -685,7 +685,7 @@ cdef class ScalarPannedSource(Source):
     def __init__(self, context, panner_strategy=PannerStrategy.DELEGATE, panning_scalar=0.0):
         cdef syz_Handle ctx = context._get_handle_checked(Context)      
         cdef syz_Handle out
-        _checked(syz_createScalarPannedSource(&out, ctx, panner_strategy.value, panning_scalar, NULL, NULL))
+        _checked(syz_createScalarPannedSource(&out, ctx, panner_strategy.value, panning_scalar, NULL, NULL, NULL))
         super().__init__(out)
 
     panning_scalar = DoubleProperty(SYZ_P_PANNING_SCALAR)
@@ -696,7 +696,7 @@ cdef class Source3D(Source):
     def __init__(self, context, panner_strategy=PannerStrategy.DELEGATE, position=(0.0, 0.0, 0.0)):
         cdef syz_Handle ctx = context._get_handle_checked(Context)      
         cdef syz_Handle out
-        _checked(syz_createSource3D(&out, ctx, panner_strategy.value, position[0], position[1], position[2], NULL, NULL))
+        _checked(syz_createSource3D(&out, ctx, panner_strategy.value, position[0], position[1], position[2], NULL, NULL, NULL))
         super().__init__(out)
 
     distance_model = enum_property(SYZ_P_DISTANCE_MODEL, lambda x: DistanceModel(x))
@@ -814,7 +814,7 @@ cdef class Buffer(_BaseObject):
 cdef class BufferGenerator(Generator):
     def __init__(self, context):
         cdef syz_Handle handle
-        _checked(syz_createBufferGenerator(&handle, context._get_handle_checked(Context), NULL, NULL))
+        _checked(syz_createBufferGenerator(&handle, context._get_handle_checked(Context), NULL, NULL, NULL))
         super().__init__(handle)
 
     buffer = ObjectProperty(SYZ_P_BUFFER, Buffer)
@@ -830,7 +830,7 @@ class NoiseType(Enum):
 cdef class NoiseGenerator(Generator):
     def __init__(self, context, channels = 1):
         cdef syz_Handle handle
-        _checked(syz_createNoiseGenerator(&handle, context._get_handle_checked(Context), channels, NULL, NULL))
+        _checked(syz_createNoiseGenerator(&handle, context._get_handle_checked(Context), channels, NULL, NULL, NULL))
         super().__init__(handle)
 
     noise_type = enum_property(SYZ_P_NOISE_TYPE, lambda x: NoiseType(x))
@@ -858,7 +858,7 @@ cdef class EchoTapConfig:
 cdef class GlobalEcho(GlobalEffect):
     def __init__(self, context):
         cdef syz_Handle handle
-        _checked(syz_createGlobalEcho(&handle, context._get_handle_checked(Context), NULL, NULL))
+        _checked(syz_createGlobalEcho(&handle, context._get_handle_checked(Context), NULL, NULL, NULL))
         super().__init__(handle)
 
     cpdef set_taps(self, taps):
@@ -886,7 +886,7 @@ cdef class GlobalEcho(GlobalEffect):
 cdef class GlobalFdnReverb(GlobalEffect):
     def __init__(self, context):
         cdef syz_Handle handle
-        _checked(syz_createGlobalFdnReverb(&handle, context._get_handle_checked(Context), NULL, NULL))
+        _checked(syz_createGlobalFdnReverb(&handle, context._get_handle_checked(Context), NULL, NULL, NULL))
         super().__init__(handle)
 
     mean_free_path = DoubleProperty(SYZ_P_MEAN_FREE_PATH)

@@ -1,13 +1,22 @@
 cdef extern from "synthizer.h":
 
+    void syz_getVersion(unsigned int* major, unsigned int* minor, unsigned int* patch)
+
     ctypedef unsigned long long syz_Handle
 
     ctypedef int syz_ErrorCode
+
+    cdef struct syz_UserAutomationEvent:
+        unsigned long long param
+
+    cdef union _syz_Event_payload_u:
+        syz_UserAutomationEvent user_automation
 
     cdef struct syz_Event:
         int type
         syz_Handle source
         syz_Handle context
+        _syz_Event_payload_u payload
 
     void syz_eventDeinit(syz_Event* event)
 
@@ -103,15 +112,36 @@ cdef extern from "synthizer.h":
 
     cdef struct syz_AutomationPoint:
         unsigned int interpolation_type
-        double automation_time
         double values[6]
         unsigned long long flags
 
-    syz_ErrorCode syz_createAutomationTimeline(syz_Handle* out, unsigned int point_count, syz_AutomationPoint* points, unsigned long long flags, void* userdata, syz_UserdataFreeCallback* userdata_free_callback)
+    cdef struct syz_AutomationAppendPropertyCommand:
+        int property
+        syz_AutomationPoint point
 
-    syz_ErrorCode syz_automationSetTimeline(syz_Handle object, int property, syz_Handle timeline)
+    cdef struct syz_AutomationClearPropertyCommand:
+        int property
 
-    syz_ErrorCode syz_automationClear(syz_Handle objeect, int property)
+    cdef struct syz_AutomationSendUserEventCommand:
+        unsigned long long param
+
+    cdef union _syz_AutomationCommand_params_u:
+        syz_AutomationAppendPropertyCommand append_to_property
+        syz_AutomationClearPropertyCommand clear_property
+        syz_AutomationSendUserEventCommand send_user_event
+
+    cdef struct syz_AutomationCommand:
+        syz_Handle target
+        double time
+        int type
+        unsigned int flags
+        _syz_AutomationCommand_params_u params
+
+    syz_ErrorCode syz_createAutomationBatch(syz_Handle* out, syz_Handle context, void* userdata, syz_UserdataFreeCallback* userdata_free_callback)
+
+    syz_ErrorCode syz_automationBatchAddCommands(syz_Handle batch, unsigned long long commands_len, syz_AutomationCommand* commands)
+
+    syz_ErrorCode syz_automationBatchExecute(syz_Handle batch)
 
     syz_ErrorCode syz_createContext(syz_Handle* out, void* userdata, syz_UserdataFreeCallback* userdata_free_callback)
 
@@ -151,11 +181,11 @@ cdef extern from "synthizer.h":
 
     syz_ErrorCode syz_createStreamHandleFromCustomStream(syz_Handle* out, syz_CustomStreamDef* callbacks, void* userdata, syz_UserdataFreeCallback* userdata_free_callback)
 
-    syz_ErrorCode syz_createStreamingGeneratorFromStreamParams(syz_Handle* out, syz_Handle context, char* protocol, char* path, void* param, void* userdata, syz_UserdataFreeCallback* userdata_free_callback)
+    syz_ErrorCode syz_createStreamingGeneratorFromStreamParams(syz_Handle* out, syz_Handle context, char* protocol, char* path, void* param, void* config, void* userdata, syz_UserdataFreeCallback* userdata_free_callback)
 
-    syz_ErrorCode syz_createStreamingGeneratorFromFile(syz_Handle* out, syz_Handle context, char* path, void* userdata, syz_UserdataFreeCallback* userdata_free_callback)
+    syz_ErrorCode syz_createStreamingGeneratorFromFile(syz_Handle* out, syz_Handle context, char* path, void* config, void* userdata, syz_UserdataFreeCallback* userdata_free_callback)
 
-    syz_ErrorCode syz_createStreamingGeneratorFromStreamHandle(syz_Handle* out, syz_Handle context, syz_Handle stream, void* userdata, syz_UserdataFreeCallback* userdata_free_callback)
+    syz_ErrorCode syz_createStreamingGeneratorFromStreamHandle(syz_Handle* out, syz_Handle context, syz_Handle stream, void* config, void* userdata, syz_UserdataFreeCallback* userdata_free_callback)
 
     syz_ErrorCode syz_createBufferFromStreamParams(syz_Handle* out, char* protocol, char* path, void* param, void* userdata, syz_UserdataFreeCallback* userdata_free_callback) nogil
 
@@ -173,21 +203,21 @@ cdef extern from "synthizer.h":
 
     syz_ErrorCode syz_bufferGetLengthInSeconds(double* out, syz_Handle buffer)
 
-    syz_ErrorCode syz_createBufferGenerator(syz_Handle* out, syz_Handle context, void* userdata, syz_UserdataFreeCallback* userdata_free_callback)
+    syz_ErrorCode syz_createBufferGenerator(syz_Handle* out, syz_Handle context, void* config, void* userdata, syz_UserdataFreeCallback* userdata_free_callback)
 
     syz_ErrorCode syz_sourceAddGenerator(syz_Handle source, syz_Handle generator)
 
     syz_ErrorCode syz_sourceRemoveGenerator(syz_Handle source, syz_Handle generator)
 
-    syz_ErrorCode syz_createDirectSource(syz_Handle* out, syz_Handle context, void* userdata, syz_UserdataFreeCallback* userdata_free_callback)
+    syz_ErrorCode syz_createDirectSource(syz_Handle* out, syz_Handle context, void* config, void* userdata, syz_UserdataFreeCallback* userdata_free_callback)
 
-    syz_ErrorCode syz_createAngularPannedSource(syz_Handle* out, syz_Handle context, int panner_strategy, double azimuth, double elevation, void* userdata, syz_UserdataFreeCallback* userdata_free_callback)
+    syz_ErrorCode syz_createAngularPannedSource(syz_Handle* out, syz_Handle context, int panner_strategy, double azimuth, double elevation, void* config, void* userdata, syz_UserdataFreeCallback* userdata_free_callback)
 
-    syz_ErrorCode syz_createScalarPannedSource(syz_Handle* out, syz_Handle context, int panner_strategy, double scalar, void* userdata, syz_UserdataFreeCallback* userdata_free_callback)
+    syz_ErrorCode syz_createScalarPannedSource(syz_Handle* out, syz_Handle context, int panner_strategy, double panning_scalar, void* config, void* userdata, syz_UserdataFreeCallback* userdata_free_callback)
 
-    syz_ErrorCode syz_createSource3D(syz_Handle* out, syz_Handle context, int panner_strategy, double x, double y, double z, void* userdata, syz_UserdataFreeCallback* userdata_free_callback)
+    syz_ErrorCode syz_createSource3D(syz_Handle* out, syz_Handle context, int panner_strategy, double x, double y, double z, void* config, void* userdata, syz_UserdataFreeCallback* userdata_free_callback)
 
-    syz_ErrorCode syz_createNoiseGenerator(syz_Handle* out, syz_Handle context, unsigned int channels, void* userdata, syz_UserdataFreeCallback* userdata_free_callback)
+    syz_ErrorCode syz_createNoiseGenerator(syz_Handle* out, syz_Handle context, unsigned int channels, void* config, void* userdata, syz_UserdataFreeCallback* userdata_free_callback)
 
     cdef struct syz_RouteConfig:
         double gain
@@ -202,7 +232,7 @@ cdef extern from "synthizer.h":
 
     syz_ErrorCode syz_effectReset(syz_Handle effect)
 
-    syz_ErrorCode syz_createGlobalEcho(syz_Handle* out, syz_Handle context, void* userdata, syz_UserdataFreeCallback* userdata_free_callback)
+    syz_ErrorCode syz_createGlobalEcho(syz_Handle* out, syz_Handle context, void* config, void* userdata, syz_UserdataFreeCallback* userdata_free_callback)
 
     cdef struct syz_EchoTapConfig:
         double delay
@@ -211,4 +241,4 @@ cdef extern from "synthizer.h":
 
     syz_ErrorCode syz_globalEchoSetTaps(syz_Handle handle, unsigned int n_taps, syz_EchoTapConfig* taps)
 
-    syz_ErrorCode syz_createGlobalFdnReverb(syz_Handle* out, syz_Handle context, void* userdata, syz_UserdataFreeCallback* userdata_free_callback)
+    syz_ErrorCode syz_createGlobalFdnReverb(syz_Handle* out, syz_Handle context, void* config, void* userdata, syz_UserdataFreeCallback* userdata_free_callback)

@@ -8,10 +8,10 @@ bindings.  Se the Synthizer manual for more details and example usage.
 You probably want the Pypi version, which will just `pip install` for you
 without a problem.  But if you want to install from this repository it's sadly
 more involved than just depending on it, since the Python bindings need to
-produce a vendored version of Synthizer itself.  it's possible to get source
+produce a vendored version of Synthizer itself.  It's possible to get source
 distributions and wheels from the [CI
 runs](https://github.com/synthizer/synthizer-python/actions), or you can follow
-the ofllowing procedure:
+the following procedure:
 
 - Clone this repo including the submodule: `git clone --recursive
   https://github.com/synthizer/synthizer-python`
@@ -37,3 +37,6 @@ this as I have extra time.  How this works is as follows:
   above for installing from the repository.
 - At some point, usually around the time of a Synthizer release, I tag a release
   here as well and your changes go out to Pypi.
+
+We're tracking things that need to be added as issues on this repository, if
+you're looking for ideas or a task list.
