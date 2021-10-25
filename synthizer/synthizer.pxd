@@ -203,6 +203,9 @@ cdef extern from "synthizer.h":
 
     syz_ErrorCode syz_bufferGetLengthInSeconds(double* out, syz_Handle buffer)
 
+    syz_ErrorCode syz_bufferGetSizeInBytes(unsigned long long *size, syz_Handle buffer)
+
+
     syz_ErrorCode syz_createBufferGenerator(syz_Handle* out, syz_Handle context, void* config, void* userdata, syz_UserdataFreeCallback* userdata_free_callback)
 
     syz_ErrorCode syz_sourceAddGenerator(syz_Handle source, syz_Handle generator)

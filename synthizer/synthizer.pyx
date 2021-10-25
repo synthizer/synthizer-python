@@ -800,7 +800,7 @@ cdef class Buffer(_BaseObject):
         cdef unsigned int ret
         _checked(syz_bufferGetChannels(&ret, self.handle))
         return ret
-
+    
     cpdef get_length_in_samples(self):
         cdef unsigned int ret
         _checked(syz_bufferGetLengthInSamples(&ret, self.handle))
@@ -809,6 +809,11 @@ cdef class Buffer(_BaseObject):
     cpdef get_length_in_seconds(self):
         cdef double ret
         _checked(syz_bufferGetLengthInSeconds(&ret, self.handle))
+        return ret
+
+    cpdef get_size_in_bytes(self):
+        cdef unsigned long long ret
+        _checked(syz_bufferGetSizeInBytes(&ret, self.handle))
         return ret
 
 cdef class BufferGenerator(Generator):
