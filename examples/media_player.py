@@ -27,7 +27,7 @@ with synthizer.initialized(
     source = synthizer.Source3D(ctx)
     # It'll play the BufferGenerator.
     source.add_generator(generator)
-    # Keep track of looping, since property reads are expensive:
+    # Keep track of looping, since property reads will most likely be out of date with the current actual value:
     looping = False
 
     # A simple command parser.

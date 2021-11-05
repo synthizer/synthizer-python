@@ -11,7 +11,8 @@ with synthizer.initialized(
     noise = synthizer.NoiseGenerator(ctx, channels=2)
     source = synthizer.DirectSource(ctx)
     source.add_generator(noise)
-
+    source.gain.value = 0.25 #By default the noise output is extremely loud
+    
     for t in itertools.cycle(noise_types):
         print("Noise type", t.name)
         noise.noise_type.value = t

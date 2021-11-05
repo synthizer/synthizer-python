@@ -53,7 +53,7 @@ cdef bytes _to_bytes(x):
         return x
     return bytes(x, "utf-8")
 
-# These are descriptors for properties so that we don't have to continually deal with defining 6 line method pairs.
+# These are properties so that we don't have to continually deal with defining 6 line method pairs.
 # These might eventually prove to be too slow, in which case we will have to convert to get_xxx and set_xxx methods.
 # Unfortunately Cython doesn't give us a convenient way to generate such at compile time.
 # Fortunately there's a way to migrate people forward if we must.
@@ -138,7 +138,7 @@ cdef class Double3Property(_PropertyBase):
         try:
             x, y, z = value
         except ValueError as e:
-            raise ValueError("3 doubles are required for Double3Property.")
+            raise ValueError("Three doubles are required for Double3Property.")
         _checked(syz_setD3(instance._get_handle(), self.property, x, y, z))
 
 cdef class Double6Property(_PropertyBase):
@@ -184,7 +184,8 @@ cdef class ObjectProperty(_PropertyBase):
 
     @value.setter
     def value(self, _BaseObject value):
-        _checked(syz_setO(self.instance._get_handle(), self.property, value.handle if value else 0))
+        instance = self.instance
+        _checked(syz_setO(instance._get_handle(), self.property, value.handle if value else 0))
 
 class LogLevel(Enum):
     ERROR = SYZ_LOG_LEVEL_ERROR
