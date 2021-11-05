@@ -72,7 +72,7 @@ cdef class _PropertyBase:
     def instance(self):
         obj = self._instance()
         if obj is None:
-            raise RuntimeError("Matching objject instance for property does not exist.")
+            raise RuntimeError("Matching object instance for property does not exist.")
         return obj
 
     @property
@@ -290,6 +290,14 @@ cdef class _BaseObject:
         cdef PyObject *ud = <PyObject *>ubox
         Py_INCREF(ubox)
         _checked(syz_handleSetUserdata(self.handle, <void *>ud, userdataFree))
+
+    def __setattr__(self, name, value):
+        # If an object of type _PropertyBase matching name already is on this object, prevent it from being reassigned
+        obj = getattr(self, name, None)
+        if isinstance(obj, _PropertyBase):
+            raise RuntimeError("You cannot directly reassign property objects.")
+        super().__setattr__(name, value)
+
 
     def dec_ref(self):
         """Decrement the reference count. Must be called in order to not leak Synthizer objects."""
