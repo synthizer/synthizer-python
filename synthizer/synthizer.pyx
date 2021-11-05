@@ -903,6 +903,8 @@ class NoiseType(Enum):
     FILTERED_BROWN = SYZ_NOISE_TYPE_FILTERED_BROWN
 
 cdef class NoiseGenerator(Generator):
+    cdef public IntProperty noise_type
+
     def __init__(self, context, channels = 1):
         cdef syz_Handle handle
         _checked(syz_createNoiseGenerator(&handle, context._get_handle_checked(Context), channels, NULL, NULL, NULL))
