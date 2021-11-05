@@ -13,7 +13,7 @@ with synthizer.initialized():
         data = f.read()
     buffer = synthizer.Buffer.from_encoded_data(data)
     gen = synthizer.BufferGenerator(ctx)
-    gen.buffer = buffer
+    gen.buffer.value = buffer
     src = synthizer.DirectSource(ctx)
     src.add_generator(gen)
     print("Press enter to exit")

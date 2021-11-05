@@ -18,12 +18,12 @@ with synthizer.initialized(
     ctx = synthizer.Context()
     gen = synthizer.BufferGenerator(ctx)
     buffer = synthizer.Buffer.from_file(sys.argv[1])
-    gen.buffer = buffer
+    gen.buffer.value = buffer
     src = synthizer.Source3D(ctx)
     src.add_generator(gen)
 
     # create and connect the effect with a default gain of 1.0.
     reverb = synthizer.GlobalFdnReverb(ctx)
-    reverb.t60 = 10
+    reverb.t60.value = 10
     ctx.config_route(src, reverb)
     time.sleep(5.0)

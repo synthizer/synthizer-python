@@ -16,7 +16,7 @@ with synthizer.initialized(
     ctx = synthizer.Context()
     buffer = synthizer.Buffer.from_file(file_path)
     gen = synthizer.BufferGenerator(ctx)
-    gen.buffer = buffer
+    gen.buffer.value = buffer
     src = synthizer.DirectSource(ctx)
     src.add_generator(gen)
     print("Press enter to exit")

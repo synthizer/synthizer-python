@@ -13,6 +13,6 @@ with synthizer.initialized(
     source.add_generator(noise)
 
     for t in itertools.cycle(noise_types):
-        print("Nois type", t.name)
-        noise.noise_type = t
+        print("Noise type", t.name)
+        noise.noise_type.value = t
         time.sleep(5.0)

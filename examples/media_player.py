@@ -15,14 +15,14 @@ with synthizer.initialized(
     # This starts the audio threads.
     ctx = synthizer.Context()
     # Enable HRTF as the default panning strategy before making a source
-    ctx.default_panner_strategy = synthizer.PannerStrategy.HRTF
+    ctx.default_panner_strategy.value = synthizer.PannerStrategy.HRTF
 
     # A BufferGenerator plays back a buffer:
     generator = synthizer.BufferGenerator(ctx)
     # A buffer holds audio data. We read from the specified file:
     buffer = synthizer.Buffer.from_file(sys.argv[1])
     # Tell the generator to use the buffer.
-    generator.buffer = buffer
+    generator.buffer.value = buffer
     # A Source3D is a 3D source, as you'd expect.
     source = synthizer.Source3D(ctx)
     # It'll play the BufferGenerator.
@@ -32,8 +32,8 @@ with synthizer.initialized(
 
     # A simple command parser.
     while True:
-        cmd = input("Command: ")
-        cmd = cmd.split()
+        text = input("Command: ")
+        cmd = text.split()
         if len(cmd) == 0:
             continue
         if cmd[0] == "pause":
@@ -49,7 +49,7 @@ with synthizer.initialized(
             except ValueError:
                 print("Unable to parse coordinates")
                 continue
-            source.position = (x, y, z)
+            source.position.value = (x, y, z)
         elif cmd[0] == "seek":
             if len(cmd) != 2:
                 print("Syntax: seek <seconds>")
@@ -60,14 +60,14 @@ with synthizer.initialized(
                 print("Unable to parse position")
                 continue
             try:
-                generator.playback_position = pos
+                generator.playback_position.value = pos
             except synthizer.SynthizerError as e:
                 print(e)
         elif cmd[0] == "quit":
             break
         elif cmd[0] == "loop":
             looping = not looping
-            generator.looping = looping
+            generator.looping.value = looping
             print("Looping" if looping else "Not looping")
         elif cmd[0] == "gain":
             if len(cmd) != 2:
@@ -80,6 +80,6 @@ with synthizer.initialized(
                 continue
             # Convert to scalar gain from db.
             gain = 10 ** (value / 20)
-            source.gain = gain
+            source.gain.value = gain
         else:
             print("Unrecognized command")

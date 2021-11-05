@@ -11,11 +11,11 @@ with synthizer.initialized():
     )
     gen = synthizer.BufferGenerator(ctx)
     src.add_generator(gen)
-    gen.looping = True
+    gen.looping.value = True
 
     buffer = synthizer.Buffer.from_file(sys.argv[1])
-    gen.buffer = buffer
+    gen.buffer.value = buffer
 
     for angle in range(0, 360 * 10):
-        src.azimuth = angle % 360
+        src.azimuth.value = angle % 360
         time.sleep(0.005)

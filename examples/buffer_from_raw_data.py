@@ -21,14 +21,14 @@ with synthizer.initialized():
     src = synthizer.DirectSource(ctx)
     gen = synthizer.BufferGenerator(ctx)
     src.add_generator(gen)
-    gen.looping = True
+    gen.looping.value = True
 
     data = array.array("f", [0.0] * FRAMES * 2)
     gen_sine(data, SR, freq_l, FRAMES, 0, 2)
     gen_sine(data, SR, freq_r, FRAMES, 1, 2)
 
     buffer = synthizer.Buffer.from_float_array(SR, 2, data)
-    gen.buffer = buffer
+    gen.buffer.value = buffer
 
     print("Press enter to exit")
     input()
