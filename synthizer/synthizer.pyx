@@ -68,10 +68,10 @@ cdef class _PropertyBase:
     def _get_handle_checked(self):
         obj = self._instance()
         if obj is None:
-            raise RuntimeError("Matching object instance for property does not exist.")
+            raise RuntimeError("Object no longer exists.")
         handle = obj._get_handle()
         if handle == 0:
-            raise RuntimeError("The matching object instance for this property has been dereferenced.")
+            raise RuntimeError("Object no longer exists.")
         return handle
 
 cdef class IntProperty(_PropertyBase):
@@ -966,7 +966,9 @@ cdef class GlobalEcho(GlobalEffect):
 
 cdef class GlobalFdnReverb(GlobalEffect):
 
-    cdef public DoubleProperty mean_free_path, t60, late_reflections_lf_rolloff, late_reflections_lf_reference, late_reflections_hf_rolloff, late_reflections_hf_reference, late_reflections_diffusion, late_reflections_modulation_depth, late_reflections_modulation_frequency, late_reflections_delay
+    cdef public DoubleProperty mean_free_path, t60, late_reflections_lf_rolloff
+    cdef public late_reflections_lf_reference, late_reflections_hf_rolloff, late_reflections_hf_reference
+    cdef public late_reflections_diffusion, late_reflections_modulation_depth, late_reflections_modulation_frequency, late_reflections_delay
 
     def __init__(self, context):
         cdef syz_Handle handle
