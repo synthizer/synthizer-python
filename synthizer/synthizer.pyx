@@ -65,24 +65,14 @@ cdef class _PropertyBase:
         self._instance = ref(instance)
         self.property = property
 
-    def __delete__(self, instance):
-        raise RuntimeError("Deleting attributes from Synthizer objects is not possible")
-
-    @property
-    def instance(self):
+    def _get_handle_checked(self):
         obj = self._instance()
         if obj is None:
             raise RuntimeError("Matching object instance for property does not exist.")
-        return obj
-
-    @property
-    def value(self):
-        raise NotImplementedError()
-
-    @value.setter
-    def value(self, value):
-        raise NotImplementedError()
-
+        handle = obj._get_handle()
+        if handle == 0:
+            raise RuntimeError("The matching object instance for this property has been dereferenced.")
+        return handle
 
 cdef class IntProperty(_PropertyBase):
     cdef object conv_in
@@ -96,14 +86,14 @@ cdef class IntProperty(_PropertyBase):
     @property
     def value(self):
         cdef int val
-        instance = self.instance
-        _checked(syz_getI(&val, instance._get_handle(), self.property))
+        handle = self._get_handle_checked()
+        _checked(syz_getI(&val, handle, self.property))
         return self.conv_out(val)
 
     @value.setter
     def value(self, value):
-        instance = self.instance
-        _checked(syz_setI(instance._get_handle(), self.property, self.conv_in(value)))
+        handle = self._get_handle_checked()
+        _checked(syz_setI(handle, self.property, self.conv_in(value)))
 
 def enum_property(instance, v, e):
     return IntProperty(instance, v, conv_in = lambda x: x.value, conv_out = lambda x: e(x))
@@ -113,52 +103,52 @@ cdef class DoubleProperty(_PropertyBase):
     @property
     def value(self):
         cdef double val
-        instance = self.instance
-        _checked(syz_getD(&val, instance._get_handle(), self.property))
+        handle = self._get_handle_checked()
+        _checked(syz_getD(&val, handle, self.property))
         return val
 
     @value.setter
     def value(self, double value):
-        instance = self.instance
-        _checked(syz_setD(instance._get_handle(), self.property, value))
+        handle = self._get_handle_checked()
+        _checked(syz_setD(handle, self.property, value))
 
 cdef class Double3Property(_PropertyBase):
 
     @property
     def value(self):
         cdef double x, y, z
-        instance = self.instance
-        _checked(syz_getD3(&x, &y, &z, instance._get_handle(), self.property))
+        handle = self._get_handle_checked()
+        _checked(syz_getD3(&x, &y, &z, handle, self.property))
         return (x, y, z)
 
     @value.setter
     def value(self, value):
         cdef double x, y, z
-        instance = self.instance
+        handle = self._get_handle_checked()
         try:
             x, y, z = value
         except ValueError as e:
             raise ValueError("Three doubles are required for Double3Property.")
-        _checked(syz_setD3(instance._get_handle(), self.property, x, y, z))
+        _checked(syz_setD3(handle, self.property, x, y, z))
 
 cdef class Double6Property(_PropertyBase):
 
     @property
     def value(self):
         cdef double x1, y1, z1, x2, y2, z2
-        instance = self.instance
-        _checked(syz_getD6(&x1, &y1, &z1, &x2, &y2, &z2, instance.handle, self.property))
+        handle = self._get_handle_checked()
+        _checked(syz_getD6(&x1, &y1, &z1, &x2, &y2, &z2, handle, self.property))
         return (x1, y1, z1, x2, y2, z2)
 
     @value.setter
     def value(self, value):
         cdef double x1, y1, z1, x2, y2, z2
-        instance = self.instance
+        handle = self._get_handle_checked()
         try:
             x1, y1, z1, x2, y2, z2 = value
         except ValueError as e:
-            raise ValueError("6 doubles required for Double6Property")
-        _checked(syz_setD6(instance._get_handle(), self.property, x1, y1, z1, x2, y2, z2))
+            raise ValueError("Six doubles are required for Double6Property")
+        _checked(syz_setD6(handle, self.property, x1, y1, z1, x2, y2, z2))
 
 cdef class BiquadProperty(_PropertyBase):
 
@@ -168,8 +158,8 @@ cdef class BiquadProperty(_PropertyBase):
 
     @value.setter
     def value(self, BiquadConfig value):
-        instance = self.instance
-        _checked(syz_setBiquad(instance._get_handle(), self.property, &value.config))
+        handle = self._get_handle_checked()
+        _checked(syz_setBiquad(handle, self.property, &value.config))
 
 cdef class ObjectProperty(_PropertyBase):
     cdef object cls
@@ -184,8 +174,8 @@ cdef class ObjectProperty(_PropertyBase):
 
     @value.setter
     def value(self, _BaseObject value):
-        instance = self.instance
-        _checked(syz_setO(instance._get_handle(), self.property, value.handle if value else 0))
+        handle = self._get_handle_checked()
+        _checked(syz_setO(handle, self.property, value.handle if value else 0))
 
 class LogLevel(Enum):
     ERROR = SYZ_LOG_LEVEL_ERROR
@@ -348,8 +338,8 @@ cdef class Pausable(_BaseObject):
 
 cdef class Event:
     """Base class for all Synthizer events"""
-    cpdef public Context context
-    cpdef public object source
+    cdef public Context context
+    cdef public object source
 
     def __init__(self, context, source):
         self.context = context
@@ -893,9 +883,9 @@ cdef class Buffer(_BaseObject):
 
 cdef class BufferGenerator(Generator):
 
-    cpdef public IntProperty looping
-    cpdef public ObjectProperty buffer
-    cpdef public DoubleProperty playback_position
+    cdef public IntProperty looping
+    cdef public ObjectProperty buffer
+    cdef public DoubleProperty playback_position
 
     def __init__(self, context):
         cdef syz_Handle handle
@@ -922,8 +912,8 @@ cdef class NoiseGenerator(Generator):
 
 cdef class GlobalEffect(_BaseObject):
 
-    cpdef public BiquadProperty filter_input
-    cpdef public DoubleProperty gain
+    cdef public BiquadProperty filter_input
+    cdef public DoubleProperty gain
 
     def __init__(self, syz_Handle handle):
         super().__init__(handle)
