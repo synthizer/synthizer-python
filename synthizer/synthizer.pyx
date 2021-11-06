@@ -53,10 +53,7 @@ cdef bytes _to_bytes(x):
         return x
     return bytes(x, "utf-8")
 
-# These are properties so that we don't have to continually deal with defining 6 line method pairs.
-# These might eventually prove to be too slow, in which case we will have to convert to get_xxx and set_xxx methods.
-# Unfortunately Cython doesn't give us a convenient way to generate such at compile time.
-# Fortunately there's a way to migrate people forward if we must.
+# This is the base class for all Synthizer properties
 cdef class _PropertyBase:
     cdef object _instance
     cdef int property
@@ -66,6 +63,7 @@ cdef class _PropertyBase:
         self.property = property
 
     def _get_handle_checked(self):
+        # Any attempt to reference a non-existing object should raise an error
         obj = self._instance()
         if obj is None:
             raise RuntimeError("Object no longer exists.")
