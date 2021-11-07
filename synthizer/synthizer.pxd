@@ -111,7 +111,7 @@ cdef extern from "synthizer.h":
     syz_ErrorCode syz_biquadDesignBandpass(syz_BiquadConfig* filter, double frequency, double bw)
 
     cdef struct syz_AutomationPoint:
-        unsigned int interpolation_type
+        int interpolation_type
         double values[6]
         unsigned long long flags
 
@@ -125,7 +125,7 @@ cdef extern from "synthizer.h":
     cdef struct syz_AutomationSendUserEventCommand:
         unsigned long long param
 
-    cdef union _syz_AutomationCommand_params_u:
+    cdef union syz_AutomationCommandParams:
         syz_AutomationAppendPropertyCommand append_to_property
         syz_AutomationClearPropertyCommand clear_property
         syz_AutomationSendUserEventCommand send_user_event
@@ -135,7 +135,7 @@ cdef extern from "synthizer.h":
         double time
         int type
         unsigned int flags
-        _syz_AutomationCommand_params_u params
+        syz_AutomationCommandParams params
 
     syz_ErrorCode syz_createAutomationBatch(syz_Handle* out, syz_Handle context, void* userdata, syz_UserdataFreeCallback* userdata_free_callback)
 
@@ -203,8 +203,7 @@ cdef extern from "synthizer.h":
 
     syz_ErrorCode syz_bufferGetLengthInSeconds(double* out, syz_Handle buffer)
 
-    syz_ErrorCode syz_bufferGetSizeInBytes(unsigned long long *size, syz_Handle buffer)
-
+    syz_ErrorCode syz_bufferGetSizeInBytes(unsigned long long* size, syz_Handle buffer)
 
     syz_ErrorCode syz_createBufferGenerator(syz_Handle* out, syz_Handle context, void* config, void* userdata, syz_UserdataFreeCallback* userdata_free_callback)
 
