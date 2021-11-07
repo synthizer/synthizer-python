@@ -43,7 +43,7 @@ with synthizer.initialized(
     # but you could also:
     # sh = synthizer.StreamHandle.from_custom_stream(CustomStream(sys.argv[1]))
     # gen = synthizer.StreamingGenerator.from_stream_handle(ctx, sh)
-    gen.looping = True
+    gen.looping.value = True
     src.add_generator(gen)
 
     print("Press enter to exit...")

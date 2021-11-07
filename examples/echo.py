@@ -18,7 +18,7 @@ with synthizer.initialized(
     ctx = synthizer.Context()
     gen = synthizer.BufferGenerator(ctx)
     buffer = synthizer.Buffer.from_file(sys.argv[1])
-    gen.buffer = buffer
+    gen.buffer.value = buffer
     src = synthizer.Source3D(ctx)
     src.add_generator(gen)
 
@@ -55,11 +55,11 @@ with synthizer.initialized(
     # Sleep for a bit, to let the audio be heard
     time.sleep(10.0)
     # Set the source's gain to 0, which will let the tail of the echo be heard.
-    src.gain = 0.0
+    src.gain.value = 0.0
     # Sleep for a bit for the tail.
     time.sleep(5.0)
     # Bring it back. This causes a little bit of clipping because of the abrupt change.
-    src.gain = 1.0
+    src.gain.value = 1.0
     # Sleep for long enough to build up audio in the echo:
     time.sleep(5.0)
     # Fade the send out over the next 1 seconds:

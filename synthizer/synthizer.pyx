@@ -10,6 +10,7 @@ from synthizer_constants cimport *
 
 from cpython.mem cimport PyMem_Malloc, PyMem_Realloc, PyMem_Free
 from cpython.ref cimport PyObject, Py_DECREF, Py_INCREF
+from weakref import ref
 
 # We want the ability to acquire and release the GIL, which means making sure it's initialized.
 # It's unclear if you need this for with nogil as well as for with gil, but let's just avoid the headache entirely.
@@ -52,102 +53,127 @@ cdef bytes _to_bytes(x):
         return x
     return bytes(x, "utf-8")
 
-# These are descriptors for properties so that we don't have to continually deal with defining 6 line method pairs.
-# These might eventually prove to be too slow, in which case we will have to convert to get_xxx and set_xxx methods.
-# Unfortunately Cython doesn't give us a convenient way to generate such at compile time.
-# Fortunately there's a way to migrate people forward if we must.
+# This is the base class for all Synthizer properties
 cdef class _PropertyBase:
-    def __delete__(self, instance):
-        raise RuntimeError("Deleting attributes from Synthizer objects is not possible")
+    cdef object _instance
+    cdef int property
+
+    def __init__(self, instance, property):
+        self._instance = ref(instance)
+        self.property = property
+
+    def _get_handle_checked(self):
+        # Any attempt to reference a non-existing object should raise an error
+        obj = self._instance()
+        if obj is None:
+            raise RuntimeError("Object no longer exists.")
+        handle = obj._get_handle()
+        if handle == 0:
+            raise RuntimeError("Object no longer exists.")
+        return handle
 
 cdef class IntProperty(_PropertyBase):
-    cdef int property
     cdef object conv_in
     cdef object conv_out
 
-
-    def __init__(self, int property, conv_in = lambda x: x, conv_out = lambda x: x):
-        self.property = property
+    def __init__(self, object instance, int property, conv_in = lambda x: x, conv_out = lambda x: x):
+        super().__init__(instance, property)
         self.conv_in = conv_in
         self.conv_out = conv_out
 
-    def __get__(self, _BaseObject instance, owner):
+    @property
+    def value(self):
         cdef int val
-        _checked(syz_getI(&val, instance.handle, self.property))
+        handle = self._get_handle_checked()
+        _checked(syz_getI(&val, handle, self.property))
         return self.conv_out(val)
 
-    def __set__(self, _BaseObject instance, value):
-        _checked(syz_setI(instance.handle, self.property, self.conv_in(value)))
+    @value.setter
+    def value(self, value):
+        handle = self._get_handle_checked()
+        _checked(syz_setI(handle, self.property, self.conv_in(value)))
 
-def enum_property(v, e):
-    return IntProperty(v, conv_in = lambda x: x.value, conv_out = lambda x: e(x))
+def enum_property(instance, v, e):
+    return IntProperty(instance, v, conv_in = lambda x: x.value, conv_out = lambda x: e(x))
 
 cdef class DoubleProperty(_PropertyBase):
-    cdef int property
 
-    def __init__(self, int property):
-        self.property = property
-
-    def __get__(self, _BaseObject instance, owner):
+    @property
+    def value(self):
         cdef double val
-        _checked(syz_getD(&val, instance.handle, self.property))
+        handle = self._get_handle_checked()
+        _checked(syz_getD(&val, handle, self.property))
         return val
 
-    def __set__(self, _BaseObject instance, double value):
-        _checked(syz_setD(instance.handle, self.property, value))
+    @value.setter
+    def value(self, double value):
+        handle = self._get_handle_checked()
+        _checked(syz_setD(handle, self.property, value))
 
 cdef class Double3Property(_PropertyBase):
-    cdef int property
 
-    def __init__(self, int property):
-        self.property = property
-
-    def __get__(self, _BaseObject instance, owner):
+    @property
+    def value(self):
         cdef double x, y, z
-        _checked(syz_getD3(&x, &y, &z, instance.handle, self.property))
+        handle = self._get_handle_checked()
+        _checked(syz_getD3(&x, &y, &z, handle, self.property))
         return (x, y, z)
 
-    def __set__(self, _BaseObject instance, value):
-        _checked(syz_setD3(instance.handle, self.property, value[0], value[1], value[2]))
+    @value.setter
+    def value(self, value):
+        cdef double x, y, z
+        handle = self._get_handle_checked()
+        try:
+            x, y, z = value
+        except ValueError as e:
+            raise ValueError("Three doubles are required for Double3Property.")
+        _checked(syz_setD3(handle, self.property, x, y, z))
 
 cdef class Double6Property(_PropertyBase):
-    cdef int property
 
-    def __init__(self, int property):
-        self.property = property
-
-    def __get__(self, _BaseObject instance, owner):
+    @property
+    def value(self):
         cdef double x1, y1, z1, x2, y2, z2
-        _checked(syz_getD6(&x1, &y1, &z1, &x2, &y2, &z2, instance.handle, self.property))
+        handle = self._get_handle_checked()
+        _checked(syz_getD6(&x1, &y1, &z1, &x2, &y2, &z2, handle, self.property))
         return (x1, y1, z1, x2, y2, z2)
 
-    def __set__(self, _BaseObject instance, value):
-        _checked(syz_setD6(instance.handle, self.property, value[0], value[1], value[2], value[3], value[4], value[5]))
+    @value.setter
+    def value(self, value):
+        cdef double x1, y1, z1, x2, y2, z2
+        handle = self._get_handle_checked()
+        try:
+            x1, y1, z1, x2, y2, z2 = value
+        except ValueError as e:
+            raise ValueError("Six doubles are required for Double6Property")
+        _checked(syz_setD6(handle, self.property, x1, y1, z1, x2, y2, z2))
 
 cdef class BiquadProperty(_PropertyBase):
-    cdef int property
 
-    def __init__(self, int property):
-        self.property = property
+    @property
+    def value(self):
+        raise NotImplementedError("Filter properties cannot be read")
 
-    def __get__(self, _BaseObject instance, owner):
-            raise NotImplementedError("Filter properties cannot be read")
-
-    def __set__(self, _BaseObject instance, BiquadConfig value):
-        _checked(syz_setBiquad(instance.handle, self.property, &value.config))
+    @value.setter
+    def value(self, BiquadConfig value):
+        handle = self._get_handle_checked()
+        _checked(syz_setBiquad(handle, self.property, &value.config))
 
 cdef class ObjectProperty(_PropertyBase):
-    cdef int property
     cdef object cls
 
-    def __init__(self, int property, cls):
-        self.property = property
+    def __init__(self, object instance, int property, cls):
+        super().__init__(instance, property)
         self.cls = cls
 
-    def __get__(self, _BaseObject instance, owner):
-            raise NotImplementedError("Can't read object properties")
-    def __set__(self, _BaseObject instance, _BaseObject value):
-        _checked(syz_setO(instance.handle, self.property, value.handle if value else 0))
+    @property
+    def value(self):
+        raise NotImplementedError("Can't read object properties")
+
+    @value.setter
+    def value(self, _BaseObject value):
+        handle = self._get_handle_checked()
+        _checked(syz_setO(handle, self.property, value.handle if value else 0))
 
 class LogLevel(Enum):
     ERROR = SYZ_LOG_LEVEL_ERROR
@@ -244,7 +270,8 @@ cdef class _UserdataBox:
 
 cdef class _BaseObject:
     cdef syz_Handle handle
-
+    cdef object __weakref__
+    
     def __init__(self, syz_Handle handle):
         self.handle = handle
         _register_object(self)
@@ -252,6 +279,14 @@ cdef class _BaseObject:
         cdef PyObject *ud = <PyObject *>ubox
         Py_INCREF(ubox)
         _checked(syz_handleSetUserdata(self.handle, <void *>ud, userdataFree))
+
+    def __setattr__(self, name, value):
+        # If an object of type _PropertyBase matching name already is on this object, prevent it from being reassigned
+        obj = getattr(self, name, None)
+        if isinstance(obj, _PropertyBase):
+            raise RuntimeError("You cannot directly reassign property objects.")
+        super().__setattr__(name, value)
+
 
     def dec_ref(self):
         """Decrement the reference count. Must be called in order to not leak Synthizer objects."""
@@ -263,6 +298,9 @@ cdef class _BaseObject:
         #Internal: get a handle, after checking that this object is a subclass of the specified class.
         if not isinstance(self, cls):
             raise ValueError("Synthizer object is of an unexpected type")
+        return self.handle
+
+    cpdef syz_Handle _get_handle(self):
         return self.handle
 
     cdef object _get_userdata_box(self):
@@ -298,8 +336,8 @@ cdef class Pausable(_BaseObject):
 
 cdef class Event:
     """Base class for all Synthizer events"""
-    cpdef public Context context
-    cpdef public object source
+    cdef public Context context
+    cdef public object source
 
     def __init__(self, context, source):
         self.context = context
@@ -357,23 +395,27 @@ cdef class Context(Pausable):
     methods on other objects in Synthizer will generally not have an effect.  Once the context is gone, the only operation that makes sense for other object types
     is to destroy them.  Put another way, keep the Context alive for the duration of your application."""
 
+    cdef public DoubleProperty gain, default_distance_ref, default_distance_max, default_rolloff, default_closeness_boost, default_closeness_boost_distance
+    cdef public Double3Property position
+    cdef public Double6Property orientation
+    cdef public IntProperty default_distance_model, default_panner_strategy
+
     def __init__(self, enable_events=False):
         cdef syz_Handle handle
         _checked(syz_createContext(&handle, NULL, NULL))
         super().__init__(handle)
         if enable_events:
             self.enable_events()
-
-    gain = DoubleProperty(SYZ_P_GAIN)
-    position = Double3Property(SYZ_P_POSITION)
-    orientation = Double6Property(SYZ_P_ORIENTATION)
-    default_distance_model = enum_property(SYZ_P_DEFAULT_DISTANCE_MODEL, lambda x: DistanceModel(x))
-    default_distance_ref = DoubleProperty(SYZ_P_DEFAULT_DISTANCE_REF)
-    default_distance_max = DoubleProperty(SYZ_P_DEFAULT_DISTANCE_MAX)
-    default_rolloff = DoubleProperty(SYZ_P_DEFAULT_ROLLOFF)
-    default_closeness_boost = DoubleProperty(SYZ_P_DEFAULT_CLOSENESS_BOOST)
-    default_closeness_boost_distance = DoubleProperty(SYZ_P_DEFAULT_CLOSENESS_BOOST_DISTANCE)
-    default_panner_strategy = enum_property(SYZ_P_DEFAULT_PANNER_STRATEGY, lambda x: PannerStrategy(x))
+        self.gain = DoubleProperty(self, SYZ_P_GAIN)
+        self.position = Double3Property(self, SYZ_P_POSITION)
+        self.orientation = Double6Property(self, SYZ_P_ORIENTATION)
+        self.default_distance_model = enum_property(self, SYZ_P_DEFAULT_DISTANCE_MODEL, lambda x: DistanceModel(x))
+        self.default_distance_ref = DoubleProperty(self, SYZ_P_DEFAULT_DISTANCE_REF)
+        self.default_distance_max = DoubleProperty(self, SYZ_P_DEFAULT_DISTANCE_MAX)
+        self.default_rolloff = DoubleProperty(self, SYZ_P_DEFAULT_ROLLOFF)
+        self.default_closeness_boost = DoubleProperty(self, SYZ_P_DEFAULT_CLOSENESS_BOOST)
+        self.default_closeness_boost_distance = DoubleProperty(self, SYZ_P_DEFAULT_CLOSENESS_BOOST_DISTANCE)
+        self.default_panner_strategy = enum_property(self, SYZ_P_DEFAULT_PANNER_STRATEGY, lambda x: PannerStrategy(x))
 
     cpdef config_route(self, _BaseObject output, _BaseObject input, gain = 1.0, fade_time = 0.01, BiquadConfig filter = None):
         cdef syz_RouteConfig config
@@ -601,15 +643,24 @@ cdef class StreamHandle(_BaseObject):
 cdef class Generator(Pausable):
     """Base class for all generators."""
 
-    pitch_bend = DoubleProperty(SYZ_P_PITCH_BEND)
-    gain = DoubleProperty(SYZ_P_GAIN)
+    cdef public DoubleProperty gain, pitch_bend
+
+    def __init__(self, syz_Handle handle):
+        super().__init__(handle)
+        self.pitch_bend = DoubleProperty(self, SYZ_P_PITCH_BEND)
+        self.gain = DoubleProperty(self, SYZ_P_GAIN)    
 
 cdef class StreamingGenerator(Generator):
+
+    cdef public IntProperty looping
+    cdef public DoubleProperty playback_position
+
     def __init__(self, _handle = None):
         if _handle is None:
             raise RuntimeError("Use one of the staticmethods to initialize StreamingGenerator in order to specify where the data comes from.")
         super().__init__(_handle)
-
+        self.playback_position = DoubleProperty(self, SYZ_P_PLAYBACK_POSITION)
+        self.looping = IntProperty(self, SYZ_P_LOOPING, conv_in = int, conv_out = bool)
 
     @staticmethod
     def from_stream_params(context, protocol, path):
@@ -645,11 +696,17 @@ cdef class StreamingGenerator(Generator):
         _checked(syz_createStreamingGeneratorFromStreamHandle(&handle, context.handle, stream.handle, NULL, NULL, NULL))
         return StreamingGenerator(_handle=handle)
 
-    playback_position = DoubleProperty(SYZ_P_PLAYBACK_POSITION)
-    looping = IntProperty(SYZ_P_LOOPING, conv_in = int, conv_out = bool)
 
 cdef class Source(Pausable):
     """Base class for all sources."""
+
+    cdef public DoubleProperty gain
+    cdef public BiquadProperty filter
+
+    def __init__(self, syz_Handle handle):
+        super().__init__(handle)
+        self.gain = DoubleProperty(self, SYZ_P_GAIN)
+        self.filter = BiquadProperty(self, SYZ_P_FILTER)
 
     cpdef add_generator(self, generator):
         """Add a generator to this source."""
@@ -661,9 +718,6 @@ cdef class Source(Pausable):
         cdef syz_Handle h = generator._get_handle_checked(Generator)
         _checked(syz_sourceRemoveGenerator(self.handle, h))
 
-    gain = DoubleProperty(SYZ_P_GAIN)
-    filter = BiquadProperty(SYZ_P_FILTER)
-
 cdef class DirectSource(Source) :
     def __init__(self, context):
         cdef syz_Handle ctx = context._get_handle_checked(Context)      
@@ -672,41 +726,50 @@ cdef class DirectSource(Source) :
         super().__init__(out)
 
 cdef class AngularPannedSource(Source):
+
+
+    cdef public DoubleProperty azimuth, elevation
+    
     def __init__(self, context, panner_strategy = PannerStrategy.DELEGATE, azimuth=0.0, elevation=0.0):
         cdef syz_Handle ctx = context._get_handle_checked(Context)      
         cdef syz_Handle out
         _checked(syz_createAngularPannedSource(&out, ctx, panner_strategy.value, azimuth, elevation, NULL, NULL, NULL))
         super().__init__(out)
-
-    azimuth = DoubleProperty(SYZ_P_AZIMUTH)
-    elevation = DoubleProperty(SYZ_P_ELEVATION)
+        self.azimuth = DoubleProperty(self, SYZ_P_AZIMUTH)
+        self.elevation = DoubleProperty(self, SYZ_P_ELEVATION)
 
 cdef class ScalarPannedSource(Source):
+
+    cdef public DoubleProperty panning_scalar
+
     def __init__(self, context, panner_strategy=PannerStrategy.DELEGATE, panning_scalar=0.0):
         cdef syz_Handle ctx = context._get_handle_checked(Context)      
         cdef syz_Handle out
         _checked(syz_createScalarPannedSource(&out, ctx, panner_strategy.value, panning_scalar, NULL, NULL, NULL))
         super().__init__(out)
-
-    panning_scalar = DoubleProperty(SYZ_P_PANNING_SCALAR)
+        self.panning_scalar = DoubleProperty(self, SYZ_P_PANNING_SCALAR)
 
 cdef class Source3D(Source):
     """A source with 3D parameters."""
+
+    cdef public DoubleProperty distance_ref, distance_max, rolloff, closeness_boost, closeness_boost_distance
+    cdef public Double3Property position
+    cdef public Double6Property orientation
+    cdef public IntProperty distance_model
 
     def __init__(self, context, panner_strategy=PannerStrategy.DELEGATE, position=(0.0, 0.0, 0.0)):
         cdef syz_Handle ctx = context._get_handle_checked(Context)      
         cdef syz_Handle out
         _checked(syz_createSource3D(&out, ctx, panner_strategy.value, position[0], position[1], position[2], NULL, NULL, NULL))
         super().__init__(out)
-
-    distance_model = enum_property(SYZ_P_DISTANCE_MODEL, lambda x: DistanceModel(x))
-    distance_ref = DoubleProperty(SYZ_P_DISTANCE_REF)
-    distance_max = DoubleProperty(SYZ_P_DISTANCE_MAX)
-    rolloff = DoubleProperty(SYZ_P_ROLLOFF)
-    closeness_boost = DoubleProperty(SYZ_P_CLOSENESS_BOOST)
-    closeness_boost_distance = DoubleProperty(SYZ_P_CLOSENESS_BOOST_DISTANCE)
-    position = Double3Property(SYZ_P_POSITION)
-    orientation = Double6Property(SYZ_P_ORIENTATION)
+        self.distance_model = enum_property(self, SYZ_P_DISTANCE_MODEL, lambda x: DistanceModel(x))
+        self.distance_ref = DoubleProperty(self, SYZ_P_DISTANCE_REF)
+        self.distance_max = DoubleProperty(self, SYZ_P_DISTANCE_MAX)
+        self.rolloff = DoubleProperty(self, SYZ_P_ROLLOFF)
+        self.closeness_boost = DoubleProperty(self, SYZ_P_CLOSENESS_BOOST)
+        self.closeness_boost_distance = DoubleProperty(self, SYZ_P_CLOSENESS_BOOST_DISTANCE)
+        self.position = Double3Property(self, SYZ_P_POSITION)
+        self.orientation = Double6Property(self, SYZ_P_ORIENTATION)
 
 cdef class Buffer(_BaseObject):
     """Use Buffer.from_stream_params(protocol, path) to initialize."""
@@ -817,14 +880,18 @@ cdef class Buffer(_BaseObject):
         return ret
 
 cdef class BufferGenerator(Generator):
+
+    cdef public IntProperty looping
+    cdef public ObjectProperty buffer
+    cdef public DoubleProperty playback_position
+
     def __init__(self, context):
         cdef syz_Handle handle
         _checked(syz_createBufferGenerator(&handle, context._get_handle_checked(Context), NULL, NULL, NULL))
         super().__init__(handle)
-
-    buffer = ObjectProperty(SYZ_P_BUFFER, Buffer)
-    playback_position = DoubleProperty(SYZ_P_PLAYBACK_POSITION)
-    looping = IntProperty(SYZ_P_LOOPING, conv_in = int, conv_out = bool)
+        self.buffer = ObjectProperty(self, SYZ_P_BUFFER, Buffer)
+        self.playback_position = DoubleProperty(self, SYZ_P_PLAYBACK_POSITION)
+        self.looping = IntProperty(self, SYZ_P_LOOPING, conv_in = int, conv_out = bool)
 
 
 class NoiseType(Enum):
@@ -833,19 +900,26 @@ class NoiseType(Enum):
     FILTERED_BROWN = SYZ_NOISE_TYPE_FILTERED_BROWN
 
 cdef class NoiseGenerator(Generator):
+    cdef public IntProperty noise_type
+
     def __init__(self, context, channels = 1):
         cdef syz_Handle handle
         _checked(syz_createNoiseGenerator(&handle, context._get_handle_checked(Context), channels, NULL, NULL, NULL))
         super().__init__(handle)
-
-    noise_type = enum_property(SYZ_P_NOISE_TYPE, lambda x: NoiseType(x))
+        self.noise_type = enum_property(self, SYZ_P_NOISE_TYPE, lambda x: NoiseType(x))
 
 cdef class GlobalEffect(_BaseObject):
+
+    cdef public BiquadProperty filter_input
+    cdef public DoubleProperty gain
+
+    def __init__(self, syz_Handle handle):
+        super().__init__(handle)
+        self.gain = DoubleProperty(self, SYZ_P_GAIN)
+        self.filter_input = BiquadProperty(self, SYZ_P_FILTER_INPUT)
+
     cpdef reset(self):
         _checked(syz_effectReset(self.handle))
-
-    gain = DoubleProperty(SYZ_P_GAIN)
-    filter_input = BiquadProperty(SYZ_P_FILTER_INPUT)
 
 
 cdef class EchoTapConfig:
@@ -889,18 +963,22 @@ cdef class GlobalEcho(GlobalEffect):
 
 
 cdef class GlobalFdnReverb(GlobalEffect):
+
+    cdef public DoubleProperty mean_free_path, t60, late_reflections_lf_rolloff
+    cdef public late_reflections_lf_reference, late_reflections_hf_rolloff, late_reflections_hf_reference
+    cdef public late_reflections_diffusion, late_reflections_modulation_depth, late_reflections_modulation_frequency, late_reflections_delay
+
     def __init__(self, context):
         cdef syz_Handle handle
         _checked(syz_createGlobalFdnReverb(&handle, context._get_handle_checked(Context), NULL, NULL, NULL))
         super().__init__(handle)
-
-    mean_free_path = DoubleProperty(SYZ_P_MEAN_FREE_PATH)
-    t60 = DoubleProperty(SYZ_P_T60)
-    late_reflections_lf_rolloff = DoubleProperty(SYZ_P_LATE_REFLECTIONS_LF_ROLLOFF)
-    late_reflections_lf_reference = DoubleProperty(SYZ_P_LATE_REFLECTIONS_LF_REFERENCE)
-    late_reflections_hf_rolloff = DoubleProperty(SYZ_P_LATE_REFLECTIONS_HF_ROLLOFF)
-    late_reflections_hf_reference = DoubleProperty(SYZ_P_LATE_REFLECTIONS_HF_REFERENCE)
-    late_reflections_diffusion = DoubleProperty(SYZ_P_LATE_REFLECTIONS_DIFFUSION)
-    late_reflections_modulation_depth = DoubleProperty(SYZ_P_LATE_REFLECTIONS_MODULATION_DEPTH)
-    late_reflections_modulation_frequency = DoubleProperty(SYZ_P_LATE_REFLECTIONS_MODULATION_FREQUENCY)
-    late_reflections_delay = DoubleProperty(SYZ_P_LATE_REFLECTIONS_DELAY)
+        self.mean_free_path = DoubleProperty(self, SYZ_P_MEAN_FREE_PATH)
+        self.t60 = DoubleProperty(self, SYZ_P_T60)
+        self.late_reflections_lf_rolloff = DoubleProperty(self, SYZ_P_LATE_REFLECTIONS_LF_ROLLOFF)
+        self.late_reflections_lf_reference = DoubleProperty(self, SYZ_P_LATE_REFLECTIONS_LF_REFERENCE)
+        self.late_reflections_hf_rolloff = DoubleProperty(self, SYZ_P_LATE_REFLECTIONS_HF_ROLLOFF)
+        self.late_reflections_hf_reference = DoubleProperty(self, SYZ_P_LATE_REFLECTIONS_HF_REFERENCE)
+        self.late_reflections_diffusion = DoubleProperty(self, SYZ_P_LATE_REFLECTIONS_DIFFUSION)
+        self.late_reflections_modulation_depth = DoubleProperty(self, SYZ_P_LATE_REFLECTIONS_MODULATION_DEPTH)
+        self.late_reflections_modulation_frequency = DoubleProperty(self, SYZ_P_LATE_REFLECTIONS_MODULATION_FREQUENCY)
+        self.late_reflections_delay = DoubleProperty(self, SYZ_P_LATE_REFLECTIONS_DELAY)

@@ -11,10 +11,10 @@ with synthizer.initialized():
     )
     gen = synthizer.BufferGenerator(ctx)
     src.add_generator(gen)
-    gen.looping = True
+    gen.looping.value = True
 
     buffer = synthizer.Buffer.from_file(sys.argv[1])
-    gen.buffer = buffer
+    gen.buffer.value = buffer
 
     iterations = 100
     steps_per_iteration = 100
@@ -27,5 +27,5 @@ with synthizer.initialized():
         value = -1.0 + offset
         if iter_offset >= half_iteration:
             value *= -1.0
-        src.panning_scalar = value
+        src.panning_scalar.value = value
         time.sleep(sleep_time)
