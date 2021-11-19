@@ -72,6 +72,9 @@ cdef class _PropertyBase:
             raise RuntimeError("Object no longer exists.")
         return handle
 
+    def _get_property(self):
+        return self.property
+
 cdef class IntProperty(_PropertyBase):
     cdef object conv_in
     cdef object conv_out
@@ -238,6 +241,8 @@ class DistanceModel(Enum):
     EXPONENTIAL = SYZ_DISTANCE_MODEL_EXPONENTIAL
     INVERSE = SYZ_DISTANCE_MODEL_INVERSE
 
+
+
 cdef object _objects_by_handle = dict()
 cdef object _objects_by_handle_mutex = threading.Lock()
 
@@ -269,9 +274,11 @@ cdef class _UserdataBox:
         self.stream_buffer = None
 
 cdef class _BaseObject:
+
     cdef syz_Handle handle
     cdef object __weakref__
-    
+
+
     def __init__(self, syz_Handle handle):
         self.handle = handle
         _register_object(self)
@@ -327,6 +334,14 @@ cdef class _BaseObject:
 
 cdef class Pausable(_BaseObject):
     """Base class for anything which can be paused. Adds pause and play methods."""
+
+
+    cdef public DoubleProperty current_time, suggested_automation_time
+
+    def __init__(self, syz_Handle handle):
+        super().__init__(handle)
+        self.current_time = DoubleProperty(self, SYZ_P_CURRENT_TIME)
+        self.suggested_automation_time = DoubleProperty(self, SYZ_P_SUGGESTED_AUTOMATION_TIME)
 
     def play(self):
         _checked(syz_play(self.handle))
@@ -982,3 +997,89 @@ cdef class GlobalFdnReverb(GlobalEffect):
         self.late_reflections_modulation_depth = DoubleProperty(self, SYZ_P_LATE_REFLECTIONS_MODULATION_DEPTH)
         self.late_reflections_modulation_frequency = DoubleProperty(self, SYZ_P_LATE_REFLECTIONS_MODULATION_FREQUENCY)
         self.late_reflections_delay = DoubleProperty(self, SYZ_P_LATE_REFLECTIONS_DELAY)
+
+class InterpolationType(Enum):
+    NONE = SYZ_INTERPOLATION_TYPE_NONE
+    LINEAR = SYZ_INTERPOLATION_TYPE_LINEAR
+
+cdef class AutomationBatch(_BaseObject):
+
+    def __init__(self, context):
+        cdef syz_Handle handle
+        _checked(syz_createAutomationBatch(&handle, context._get_handle(), NULL, NULL))
+        super().__init__(handle)
+
+    @staticmethod
+    def _extract_values(obj):
+        try:
+            return (float(obj), 0.0, 0.0, 0.0, 0.0, 0.0)
+        except:
+            pass
+        try:
+            result = list(obj)
+            result += [0.0] * (6 - len(result)) #pad to 6 values for internal Synthizer functions
+            return result
+        except:
+            raise ValueError("Automated property value must be either a float or an iterable of floats.")
+
+    cpdef append_property(self, float time, _PropertyBase property, value, interpolationType):
+        cdef syz_AutomationCommand command
+        cdef syz_AutomationAppendPropertyCommand appendPropertyCommand
+        cdef syz_AutomationPoint automationPoint
+        automationPoint.interpolation_type = interpolationType.value
+        automationPoint.values = AutomationBatch._extract_values(value)
+        automationPoint.flags = 0
+        appendPropertyCommand.property = property._get_property()
+        appendPropertyCommand.point = automationPoint
+        command.target = property._get_handle_checked()
+        command.time = time
+        command.type = SYZ_AUTOMATION_COMMAND_APPEND_PROPERTY
+        command.flags = 0
+        command.params.append_to_property = appendPropertyCommand
+        _checked(syz_automationBatchAddCommands(self.handle, 1, &command))
+        return self
+
+    cpdef clear_all_properties(self, _BaseObject target):
+        cdef syz_AutomationCommand command
+        command.target = target._get_handle()
+        command.type = SYZ_AUTOMATION_COMMAND_CLEAR_ALL_PROPERTIES
+        command.time = 0
+        command.flags = 0
+        _checked(syz_automationBatchAddCommands(self.handle, 1, &command))
+        return self
+
+    cpdef clear_property(self, _PropertyBase property):
+        cdef syz_AutomationCommand command
+        cdef syz_AutomationClearPropertyCommand clearPropertyCommand
+        clearPropertyCommand.property = property._get_Property()
+        command.target = property._get_handle_checked()
+        command.type = SYZ_AUTOMATION_COMMAND_CLEAR_PROPERTY
+        command.time = 0.0
+        command.flags = 0
+        command.params.clear_property = clearPropertyCommand
+        _checked(syz_automationBatchAddCommands(self.handle, 1, &command))
+        return self
+
+    cpdef clear_user_events(self, _BaseObject target):
+        cdef syz_AutomationCommand command
+        command.target = target._get_handle()
+        command.type = SYZ_AUTOMATION_COMMAND_CLEAR_EVENTS
+        command.time = 0.0
+        command.flags = 0
+        _checked(syz_automationBatchAddCommands(self.handle, 1, &command))
+        return self
+
+    cpdef send_user_event(self, float time, _BaseObject target, unsigned long long param):
+        cdef syz_AutomationSendUserEventCommand sendUserEventCommand
+        cdef syz_AutomationCommand command
+        sendUserEventCommand.param = param
+        command.target = target._get_handle()
+        command.type = SYZ_AUTOMATION_COMMAND_SEND_USER_EVENT
+        command.time  = time
+        command.flags = 0
+        command.params.send_user_event = sendUserEventCommand
+        _checked(syz_automationBatchAddCommands(self.handle, 1, &command))
+        return self
+
+    def execute(self):
+        _checked(syz_automationBatchExecute(self.handle))
