@@ -1,14 +1,18 @@
-"""Fade out a direct source over 2 seconds."""
+"""Repeatedly rotate a source around the listener."""
 
 import math
 import sys
 import synthizer
 
 
-def circle(ctx, source, distance=10.0, circle_time=5.0):
+def circle(ctx, source, distance=10.0, circle_time=5.0, circleCount=1):
     batch = synthizer.AutomationBatch(ctx)
+
+    # The time taken to rotate one degree
     step_time = circle_time / 360
     start_time = source.suggested_automation_time.value
+
+    # There are 361 steps (degrees) because we need to complete the circle from degree 359 back to 360
     for step in range(0, 361):
         angle = math.radians(step)
         x, y = math.cos(angle) * distance, math.sin(angle) * distance
@@ -18,7 +22,7 @@ def circle(ctx, source, distance=10.0, circle_time=5.0):
             (x, y, 0),
             synthizer.InterpolationType.LINEAR,
         )
-    batch.send_user_event(start_time + circle_time, source, 0)
+    batch.send_user_event(start_time + circle_time, source, circleCount)
     batch.execute()
 
 
@@ -38,11 +42,9 @@ with synthizer.initialized(logging_backend=synthizer.LoggingBackend.STDERR):
 
     # Rotate a source around the listener, starting from the right using the default parameters of distance=10.0 and circle_time=5.0
     circle(ctx, source)
-
-    running = True
-    # Repeat until the UserAutomationEvent corresponding to the end of the fadeout is raised
-    while running:
+    while True:
         for event in ctx.get_events():
             if isinstance(event, synthizer.UserAutomationEvent):
-                print("Fadeout complete.")
-                running = False
+                # Use the param passed to the event to determine which circle was just completed and increment for the next function call
+                print(f"Circle {event.param} complete.")
+                circle(ctx, source, circleCount=event.param + 1)
