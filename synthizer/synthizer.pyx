@@ -365,11 +365,24 @@ cdef class FinishedEvent(Event):
 cdef class LoopedEvent(Event):
     pass
 
+cdef class UserAutomationEvent(Event):
+    cdef public unsigned long long param
+
+    def __init__(self, context, source, param):
+        super().__init__(context, source)
+        self.param = param
+
+
 cdef _convert_event(syz_Event event):
     if event.type == SYZ_EVENT_TYPE_FINISHED:
         return FinishedEvent(_handle_to_object(event.context), _handle_to_object(event.source))
     elif event.type == SYZ_EVENT_TYPE_LOOPED:
         return LoopedEvent(_handle_to_object(event.context), _handle_to_object(event.source))
+    elif event.type == SYZ_EVENT_TYPE_USER_AUTOMATION:
+        return UserAutomationEvent(_handle_to_object(event.context), _handle_to_object(event.source), event.payload.user_automation.param)
+
+
+
 
 cdef class BiquadConfig:
     cdef syz_BiquadConfig config
