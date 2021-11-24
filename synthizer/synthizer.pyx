@@ -1025,7 +1025,7 @@ cdef class AutomationBatch(_BaseObject):
     @staticmethod
     def _extract_values(obj):
         try:
-            return (float(obj), 0.0, 0.0, 0.0, 0.0, 0.0)
+            return [float(obj), 0.0, 0.0, 0.0, 0.0, 0.0]
         except:
             pass
         try:

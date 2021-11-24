@@ -1,10 +1,10 @@
-"""Fade out a direct source over 2 seconds."""
+"""Fade out a direct source over 5 seconds."""
 
 import sys
 import synthizer
 
 
-def fadeout(ctx, obj, time):
+def fadeout(ctx, obj, fadeout_time):
     # Create an AutomationBatch, a one-use queue for automating object properties
     batch = synthizer.AutomationBatch(ctx)
 
@@ -44,8 +44,8 @@ with synthizer.initialized(logging_backend=synthizer.LoggingBackend.STDERR):
     source = synthizer.DirectSource(ctx)
     source.add_generator(generator)
 
-    # Fade out over 2 seconds
-    fadeout(ctx, source, 2.0)
+    # Fade out over 5 seconds
+    fadeout(ctx, source, 5.0)
     running = True
 
     # Repeat until the UserAutomationEvent corresponding to the end of the fadeout is raised
