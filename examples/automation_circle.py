@@ -2,6 +2,7 @@
 
 import math
 import sys
+import time
 import synthizer
 
 
@@ -48,3 +49,4 @@ with synthizer.initialized(logging_backend=synthizer.LoggingBackend.STDERR):
                 # Use the param passed to the event to determine which circle was just completed and increment for the next function call
                 print(f"Circle {event.param} complete.")
                 circle(ctx, source, circleCount=event.param + 1)
+        time.sleep(0.01)

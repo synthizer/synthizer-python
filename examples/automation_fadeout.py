@@ -1,6 +1,7 @@
 """Fade out a direct source over 5 seconds."""
 
 import sys
+import time
 import synthizer
 
 
@@ -54,3 +55,4 @@ with synthizer.initialized(logging_backend=synthizer.LoggingBackend.STDERR):
             if isinstance(event, synthizer.UserAutomationEvent):
                 print("Fadeout complete.")
                 running = False
+        time.sleep(0.01)
