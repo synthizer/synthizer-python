@@ -2,6 +2,7 @@
 # distutils: language = c++
 import contextlib
 import threading
+from collections import abc
 from enum import Enum
 import sys
 
@@ -29,6 +30,7 @@ class _DefaultSentinel:
 
 DEFAULT_VALUE = _DefaultSentinel()
 
+
 cdef class SynthizerError(Exception):
     cdef str message
     cdef int code
@@ -44,6 +46,7 @@ cdef class SynthizerError(Exception):
     def __str__(self):
         return f"SynthizerError: {self.message} [{self.code}]"
 
+
 cdef _checked(x):
     if x != 0:
         raise SynthizerError()
@@ -55,6 +58,7 @@ cdef bytes _to_bytes(x):
 
 # This is the base class for all Synthizer properties
 cdef class _PropertyBase:
+
     cdef object _instance
     cdef int property
 
@@ -72,7 +76,12 @@ cdef class _PropertyBase:
             raise RuntimeError("Object no longer exists.")
         return handle
 
+    def _get_property(self):
+        return self.property
+
+
 cdef class IntProperty(_PropertyBase):
+
     cdef object conv_in
     cdef object conv_out
 
@@ -96,6 +105,7 @@ cdef class IntProperty(_PropertyBase):
 def enum_property(instance, v, e):
     return IntProperty(instance, v, conv_in = lambda x: x.value, conv_out = lambda x: e(x))
 
+
 cdef class DoubleProperty(_PropertyBase):
 
     @property
@@ -109,6 +119,7 @@ cdef class DoubleProperty(_PropertyBase):
     def value(self, double value):
         handle = self._get_handle_checked()
         _checked(syz_setD(handle, self.property, value))
+
 
 cdef class Double3Property(_PropertyBase):
 
@@ -129,6 +140,7 @@ cdef class Double3Property(_PropertyBase):
             raise ValueError("Three doubles are required for Double3Property.")
         _checked(syz_setD3(handle, self.property, x, y, z))
 
+
 cdef class Double6Property(_PropertyBase):
 
     @property
@@ -148,6 +160,7 @@ cdef class Double6Property(_PropertyBase):
             raise ValueError("Six doubles are required for Double6Property")
         _checked(syz_setD6(handle, self.property, x1, y1, z1, x2, y2, z2))
 
+
 cdef class BiquadProperty(_PropertyBase):
 
     @property
@@ -160,6 +173,7 @@ cdef class BiquadProperty(_PropertyBase):
         _checked(syz_setBiquad(handle, self.property, &value.config))
 
 cdef class ObjectProperty(_PropertyBase):
+
     cdef object cls
 
     def __init__(self, object instance, int property, cls):
@@ -181,9 +195,11 @@ class LogLevel(Enum):
     INFO = SYZ_LOG_LEVEL_INFO
     DEBUG = SYZ_LOG_LEVEL_DEBUG
 
+
 class LoggingBackend(Enum):
     NONE = SYZ_LOGGING_BACKEND_NONE
     STDERR = SYZ_LOGGING_BACKEND_STDERR
+
 
 cpdef initialize(log_level=DEFAULT_VALUE, logging_backend=DEFAULT_VALUE,
     libsndfile_path=DEFAULT_VALUE):
@@ -227,16 +243,19 @@ def initialized(*args, **kwargs):
     finally:
         shutdown()
 
+
 class PannerStrategy(Enum):
     DELEGATE = SYZ_PANNER_STRATEGY_DELEGATE
     HRTF = SYZ_PANNER_STRATEGY_HRTF
     STEREO = SYZ_PANNER_STRATEGY_STEREO
+
 
 class DistanceModel(Enum):
     NONE = SYZ_DISTANCE_MODEL_NONE
     LINEAR = SYZ_DISTANCE_MODEL_LINEAR
     EXPONENTIAL = SYZ_DISTANCE_MODEL_EXPONENTIAL
     INVERSE = SYZ_DISTANCE_MODEL_INVERSE
+
 
 cdef object _objects_by_handle = dict()
 cdef object _objects_by_handle_mutex = threading.Lock()
@@ -256,10 +275,12 @@ cdef _handle_to_object(handle):
 cdef void userdataFree(void *userdata) with gil:
     Py_DECREF(<object>userdata)
 
+
 cdef class _UserdataBox:
     """An internal box for containing userdata.  This exists so that we can have
     multiple userdata values associated with an object, which we use to keep
     buffers alive for stream handles."""
+
     cdef object userdata
     # Used by StreamHandle
     cdef object stream_buffer
@@ -268,10 +289,12 @@ cdef class _UserdataBox:
         self.userdata = None
         self.stream_buffer = None
 
+
 cdef class _BaseObject:
+
     cdef syz_Handle handle
     cdef object __weakref__
-    
+
     def __init__(self, syz_Handle handle):
         self.handle = handle
         _register_object(self)
@@ -286,7 +309,6 @@ cdef class _BaseObject:
         if isinstance(obj, _PropertyBase):
             raise RuntimeError("You cannot directly reassign property objects.")
         super().__setattr__(name, value)
-
 
     def dec_ref(self):
         """Decrement the reference count. Must be called in order to not leak Synthizer objects."""
@@ -325,14 +347,23 @@ cdef class _BaseObject:
             cfg.linger_timeout = linger_timeout
         _checked(syz_configDeleteBehavior(self.handle, &cfg))
 
+
 cdef class Pausable(_BaseObject):
     """Base class for anything which can be paused. Adds pause and play methods."""
+
+    cdef public DoubleProperty current_time, suggested_automation_time
+
+    def __init__(self, syz_Handle handle):
+        super().__init__(handle)
+        self.current_time = DoubleProperty(self, SYZ_P_CURRENT_TIME)
+        self.suggested_automation_time = DoubleProperty(self, SYZ_P_SUGGESTED_AUTOMATION_TIME)
 
     def play(self):
         _checked(syz_play(self.handle))
 
     def pause(self):
         _checked(syz_pause(self.handle))
+
 
 cdef class Event:
     """Base class for all Synthizer events"""
@@ -347,16 +378,30 @@ cdef class Event:
 cdef class FinishedEvent(Event):
     pass
 
+
 cdef class LoopedEvent(Event):
     pass
+
+
+cdef class UserAutomationEvent(Event):
+
+    cdef public unsigned long long param
+
+    def __init__(self, context, source, param):
+        super().__init__(context, source)
+        self.param = param
 
 cdef _convert_event(syz_Event event):
     if event.type == SYZ_EVENT_TYPE_FINISHED:
         return FinishedEvent(_handle_to_object(event.context), _handle_to_object(event.source))
     elif event.type == SYZ_EVENT_TYPE_LOOPED:
         return LoopedEvent(_handle_to_object(event.context), _handle_to_object(event.source))
+    elif event.type == SYZ_EVENT_TYPE_USER_AUTOMATION:
+        return UserAutomationEvent(_handle_to_object(event.context), _handle_to_object(event.source), event.payload.user_automation.param)
+
 
 cdef class BiquadConfig:
+
     cdef syz_BiquadConfig config
 
     def __init__(self):
@@ -387,6 +432,7 @@ cdef class BiquadConfig:
         cdef BiquadConfig out = BiquadConfig()
         _checked(syz_biquadDesignBandpass(&out.config, frequency, bandwidth))
         return out
+
 
 cdef class Context(Pausable):
     """The Synthizer context represents an open audio device and groups all Synthizer objects created with it into one unit.
@@ -455,6 +501,7 @@ cdef class Context(Pausable):
             drained_so_far += 1
             if limit != 0 and drained_so_far == limit:
                 break
+
 
 # Used to keep errors alive per the custom stream error lifetime rules in synthizer.h.
 cdef class WrappedStream:
@@ -583,6 +630,7 @@ to set statically determined protocols.
     # Now leak it.
     Py_INCREF(<object>userdata)
 
+
 cdef class StreamHandle(_BaseObject):
     """Wraps the C API concept of a StreamHandle, which may be created in a variety of ways."""
     def __init__(self, _handle=None):
@@ -640,6 +688,7 @@ cdef class StreamHandle(_BaseObject):
         _checked(syz_createStreamHandleFromCustomStream(&handle, &callbacks, NULL, NULL))
         return StreamHandle(_handle=handle)
 
+
 cdef class Generator(Pausable):
     """Base class for all generators."""
 
@@ -649,6 +698,7 @@ cdef class Generator(Pausable):
         super().__init__(handle)
         self.pitch_bend = DoubleProperty(self, SYZ_P_PITCH_BEND)
         self.gain = DoubleProperty(self, SYZ_P_GAIN)    
+
 
 cdef class StreamingGenerator(Generator):
 
@@ -689,7 +739,6 @@ cdef class StreamingGenerator(Generator):
         _checked(syz_createStreamingGeneratorFromFile(&out, ctx, path, NULL, NULL, NULL))
         return StreamingGenerator(out)
 
-
     @staticmethod
     def from_stream_handle(Context context, StreamHandle stream):
         cdef syz_Handle handle
@@ -725,8 +774,8 @@ cdef class DirectSource(Source) :
         _checked(syz_createDirectSource(&out, ctx, NULL, NULL, NULL))
         super().__init__(out)
 
-cdef class AngularPannedSource(Source):
 
+cdef class AngularPannedSource(Source):
 
     cdef public DoubleProperty azimuth, elevation
     
@@ -738,6 +787,7 @@ cdef class AngularPannedSource(Source):
         self.azimuth = DoubleProperty(self, SYZ_P_AZIMUTH)
         self.elevation = DoubleProperty(self, SYZ_P_ELEVATION)
 
+
 cdef class ScalarPannedSource(Source):
 
     cdef public DoubleProperty panning_scalar
@@ -748,6 +798,7 @@ cdef class ScalarPannedSource(Source):
         _checked(syz_createScalarPannedSource(&out, ctx, panner_strategy.value, panning_scalar, NULL, NULL, NULL))
         super().__init__(out)
         self.panning_scalar = DoubleProperty(self, SYZ_P_PANNING_SCALAR)
+
 
 cdef class Source3D(Source):
     """A source with 3D parameters."""
@@ -770,6 +821,7 @@ cdef class Source3D(Source):
         self.closeness_boost_distance = DoubleProperty(self, SYZ_P_CLOSENESS_BOOST_DISTANCE)
         self.position = Double3Property(self, SYZ_P_POSITION)
         self.orientation = Double6Property(self, SYZ_P_ORIENTATION)
+
 
 cdef class Buffer(_BaseObject):
     """Use Buffer.from_stream_params(protocol, path) to initialize."""
@@ -879,6 +931,7 @@ cdef class Buffer(_BaseObject):
         _checked(syz_bufferGetSizeInBytes(&ret, self.handle))
         return ret
 
+
 cdef class BufferGenerator(Generator):
 
     cdef public IntProperty looping
@@ -899,6 +952,7 @@ class NoiseType(Enum):
     VM = SYZ_NOISE_TYPE_VM
     FILTERED_BROWN = SYZ_NOISE_TYPE_FILTERED_BROWN
 
+
 cdef class NoiseGenerator(Generator):
     cdef public IntProperty noise_type
 
@@ -907,6 +961,7 @@ cdef class NoiseGenerator(Generator):
         _checked(syz_createNoiseGenerator(&handle, context._get_handle_checked(Context), channels, NULL, NULL, NULL))
         super().__init__(handle)
         self.noise_type = enum_property(self, SYZ_P_NOISE_TYPE, lambda x: NoiseType(x))
+
 
 cdef class GlobalEffect(_BaseObject):
 
@@ -982,3 +1037,91 @@ cdef class GlobalFdnReverb(GlobalEffect):
         self.late_reflections_modulation_depth = DoubleProperty(self, SYZ_P_LATE_REFLECTIONS_MODULATION_DEPTH)
         self.late_reflections_modulation_frequency = DoubleProperty(self, SYZ_P_LATE_REFLECTIONS_MODULATION_FREQUENCY)
         self.late_reflections_delay = DoubleProperty(self, SYZ_P_LATE_REFLECTIONS_DELAY)
+
+class InterpolationType(Enum):
+    NONE = SYZ_INTERPOLATION_TYPE_NONE
+    LINEAR = SYZ_INTERPOLATION_TYPE_LINEAR
+
+cdef _convert_values_to_automation_array(obj):
+    """Convert either a single number or sequence of numbers to an array of 6 doubles, used internally by Synthizer AutomationPoints."""
+    if isinstance(obj, abc.Sequence):
+        length = len(obj)
+        if length == 1:
+            return (obj[0], 0.0, 0.0, 0.0, 0.0, 0.0)
+        elif length == 3:
+            return (obj[0], obj[1], obj[2], 0.0, 0.0, 0.0)
+        elif length == 6:
+            return tuple(obj)
+        else:
+            raise ValueError("Automated property values require 1, 3, or 6 floats.")
+    return (float(obj), 0.0, 0.0, 0.0, 0.0, 0.0)
+
+
+cdef class AutomationBatch(_BaseObject):
+
+    def __init__(self, context):
+        cdef syz_Handle handle
+        _checked(syz_createAutomationBatch(&handle, context._get_handle(), NULL, NULL))
+        super().__init__(handle)
+
+    cpdef append_property(self, float time, _PropertyBase property, value, interpolation_type):
+        cdef syz_AutomationCommand command
+        cdef syz_AutomationAppendPropertyCommand appendPropertyCommand
+        cdef syz_AutomationPoint automationPoint
+        automationPoint.interpolation_type = interpolation_type.value
+        automationPoint.values = _convert_values_to_automation_array(value)
+        automationPoint.flags = 0
+        appendPropertyCommand.property = property._get_property()
+        appendPropertyCommand.point = automationPoint
+        command.target = property._get_handle_checked()
+        command.time = time
+        command.type = SYZ_AUTOMATION_COMMAND_APPEND_PROPERTY
+        command.flags = 0
+        command.params.append_to_property = appendPropertyCommand
+        _checked(syz_automationBatchAddCommands(self.handle, 1, &command))
+        return self
+
+    cpdef clear_all_properties(self, _BaseObject target):
+        cdef syz_AutomationCommand command
+        command.target = target._get_handle()
+        command.type = SYZ_AUTOMATION_COMMAND_CLEAR_ALL_PROPERTIES
+        command.time = 0
+        command.flags = 0
+        _checked(syz_automationBatchAddCommands(self.handle, 1, &command))
+        return self
+
+    cpdef clear_property(self, _PropertyBase property):
+        cdef syz_AutomationCommand command
+        cdef syz_AutomationClearPropertyCommand clearPropertyCommand
+        clearPropertyCommand.property = property._get_Property()
+        command.target = property._get_handle_checked()
+        command.type = SYZ_AUTOMATION_COMMAND_CLEAR_PROPERTY
+        command.time = 0.0
+        command.flags = 0
+        command.params.clear_property = clearPropertyCommand
+        _checked(syz_automationBatchAddCommands(self.handle, 1, &command))
+        return self
+
+    cpdef clear_user_events(self, _BaseObject target):
+        cdef syz_AutomationCommand command
+        command.target = target._get_handle()
+        command.type = SYZ_AUTOMATION_COMMAND_CLEAR_EVENTS
+        command.time = 0.0
+        command.flags = 0
+        _checked(syz_automationBatchAddCommands(self.handle, 1, &command))
+        return self
+
+    cpdef send_user_event(self, float time, _BaseObject target, unsigned long long param):
+        cdef syz_AutomationSendUserEventCommand sendUserEventCommand
+        cdef syz_AutomationCommand command
+        sendUserEventCommand.param = param
+        command.target = target._get_handle()
+        command.type = SYZ_AUTOMATION_COMMAND_SEND_USER_EVENT
+        command.time  = time
+        command.flags = 0
+        command.params.send_user_event = sendUserEventCommand
+        _checked(syz_automationBatchAddCommands(self.handle, 1, &command))
+        return self
+
+    def execute(self):
+        _checked(syz_automationBatchExecute(self.handle))
