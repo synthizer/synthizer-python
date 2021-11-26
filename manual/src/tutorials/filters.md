@@ -33,9 +33,9 @@ Synthizer supports lowpass, bandpass, and highpass filters.  You get them as
 follows:
 
 ```
-source.filter = synthizer.BiquadConfig.design_lowpass(frequency, q)
-source.filter = synthizer.BiquadConfig.design_highpass(frequency, q)
-source.filter = synthizer.BiquadConfig.design_bandpass(frequency, bandwidth)
+source.filter.value = synthizer.BiquadConfig.design_lowpass(frequency, q)
+source.filter.value = synthizer.BiquadConfig.design_highpass(frequency, q)
+source.filter.value = synthizer.BiquadConfig.design_bandpass(frequency, bandwidth)
 
 context.config_route(output, input, filter = synthizer.BiquadConfig.design_lowpass(1000))
 ```
@@ -62,4 +62,4 @@ To design occlusion, use a lowpass filter on the source, either as `filter` or
 `filter_direct`.  Synthizer doesn't currently provide anything to help because
 it's not possible to build a proper physics-based occlusion model and it is
 sometimes even beneficial to use bandpass or highpass filters instead (e.g.
-haudio traveling through a pipe). It has to be done per application.
+audio traveling through a pipe). It has to be done per application.

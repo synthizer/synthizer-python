@@ -14,7 +14,7 @@ Other keyword arguments to `config_delete_behavior` correspond to other fields
 on `syz_DeleteBehaviorConfig`, which is explained in the main Synthizer manual.
 
 This isn't enabled by default because it is more important for applications to
-be aware of the resources they are using, and making `destroy()` destroy the
+be aware of the resources they are using, and making `dec_ref()` destroy the
 object nearly immediately allows for this clarity.  Additionally, enabling it on
 extremely long sounds is generally not the desired effect (in that case you also
 want to pass `linger_timeout`).  That said, it is efficient enough to be used
