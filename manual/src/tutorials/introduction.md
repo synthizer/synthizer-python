@@ -9,7 +9,7 @@ straightforward fashion, though resources prevent maintaining a fully documented
 Python API reference.
 
 Nonetheless these tutorials privilege Python.  The Python bindings are special
-for two reasons: first, they're the official way I test Synthizer, and thus
+for two reasons: first, they're the official way I test Synthizer, and thus are
 always up to date.  Second, they're a good way to show how the various Synthizer
 pieces fit together without having to also demonstrate C-style error checking
 and similar boilerplate that gets in the way of learning.

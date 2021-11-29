@@ -35,7 +35,7 @@ done with an object, call `myobj.dec_ref()`.
 
 At the moment, failing to do so will permanently leak the object.  Work in
 future may lift this restriction, but it's still necessary to be explicit: if
-you aren't, things may be audioble longer than you intend.
+you aren't, things may be audible longer than you intend.
 
 Be careful here.  If you leak objects, you will eventually run out of memory. If
 you intentionally leak objects and the Python bindings start garbage collecting
@@ -64,7 +64,7 @@ The Synthizer audio graph is as follows:
 - A source is fed by one or more generators and pans audio.
 - All the sources feed the context's output.
 
-Generators are an abstract concept, which represents somewhere audio comes from.
+Generators are an abstract concept, which represent somewhere audio comes from.
 Specific kinds of generators implement the abstract interface in a concrete
 fashion, notably `BufferGenerator` (takes a buffer) and `StreamingGenerator`
 (takes streaming parameters).
@@ -105,7 +105,7 @@ To get a `Buffer` from a file and connect it to a `BufferGenerator`:
 ```python
 buffer = synthizer.Buffer.from_file("test.wav")
 generator = synthizer.BufferGenerator(ctx)
-generator.buffer = buffer
+generator.buffer.value = buffer
 ```
 
 Note the following:
@@ -121,23 +121,24 @@ Note the following:
 Sources represent audio output.  They get one or more generators, combine them
 all, and output.  Currently we have the following kinds of sources:
 
-- A `DirectSource` conneccts audio directly to the speakers, so that you can
-  pass things through without collapsing them to mono.  This is what you want
-  for music.
-- A `AngularPannedSource` is manually controlled using azimuth and elevation
+- A `DirectSource` connects audio directly to the speakers, so that you can pass
+  things through without collapsing them to mono.  This is what you want for
+  music.
+- An `AngularPannedSource` is manually controlled using azimuth and elevation
   angles.
 - A `ScalarPannedSource` is controlled by a scalar value from -1.0 (all left) to
   1.0 (all right).
-- `Source3D` is a 3D environmental source with the usual things you'd expect:
+- A `Source3D` is a 3D environmental source with the usual things you'd expect:
   distance model, position, etc.
 
 ## Properties
 
 Synthizer objects are controlled primarily through properties, which are like
-knobs on a hardware controller or sliders in a DAW.  They map to Python
-properties as properties, e.g. to set one use `obj.property = value`.
-Synthizer's C API represents these as `SYZ_P_PROPERTY_NAME` constants, which
-become `property_name` in Python.
+knobs on a hardware controller or sliders in a DAW. These map to python objects,
+each of which has a value property to get or set the value of the corresponding
+Synthizer property. For example, you could adjust the gain of a source with
+`mySource.gain.value = 0.5`. Synthizer's C API represents these as
+`SYZ_P_PROPERTY_NAME` constants, which become `property_name` in Python.
 
 Synthizer offers the following kinds of properties:
 
@@ -148,7 +149,7 @@ Synthizer offers the following kinds of properties:
 - Double3, which is a tuple of 3 doubles. Usually used as a position.
 - Double6, a tuple of 6 doubles. Usually used as an orientation (given a
   dedicated section below).
-- Object, i.e. `buffer_generator.buffer = b`.
+- Object, i.e. `buffer_generator.buffer.value = b`.
 - Biquad, which represents a filter.  See [the dedicated
   tutorial](./filters.md).
 
@@ -156,15 +157,15 @@ It is important to note that Synthizer properties are eventually consistent.
 What this means is that code like the following doesn't do what you expect:
 
 ```python
-myobj.property = 0
-myobj.property += 5
+myobj.property.value = 0
+myobj.property.value += 5
 # May leave the property set at 5 forever.
-myobj.property += 5
+myobj.property.value += 5
 # May or may not fail, depending on timing.
-assert myobj.property == 10
+assert myobj.property.value == 10
 
-myobj.property = 15
-x = myobj.property
+myobj.property.value = 15
+x = myobj.property.value
 # may or may not fail depending on timing.
 assert x == 15
 ```
@@ -174,7 +175,7 @@ various generators, where Synthizer is updating the property itself. In general,
 it's best to use properties to tell Synthizer what to do, but keep the model of
 what's supposed to be going on in your code. A common mistake is to try to use
 Synthizer to store data, for example putting the position of your objects in a
-source rather than maintaing the coordinates yourself.  For some very simple
+source rather than maintaining the coordinates yourself.  For some very simple
 rules that will ensure you avoid these bugs:
 
 - Always set properties with `=`.
@@ -195,7 +196,8 @@ right-handed and orientations consist of 2 orthogonal unit vectors `(atx, aty,
 atz, upx, upy, upz)` stored as a packed property so that they can both be set
 atomically.  But the longer version for those who don't know trigonometry is:
 
-Degrees to radians is:
+Degrees to radians is the following (you can also use the math.radians function
+from the Python standard library):
 
 ```python
 import math
@@ -227,7 +229,7 @@ To play a source in 3D space, do the following:
 - Create a source.
 - Create a buffer.
 - Create a generator.
-- `generator.buffer = buffer`
+- `generator.buffer.value = buffer`
 - `source.add_generator(generator)`
 - Then manipulate position, etc. on the source.
 
@@ -238,10 +240,10 @@ it is possible to write a function which makes creating sources very easy:
 def make_source(context, file_path):
     buffer = synthizer.Buffer.from_file(context, file_path)
     generator = synthizer.BufferGenerator(context)
-    generator.buffer = buffer
-    source = synthizer.Sourec3D(context)
+    generator.buffer.value = buffer
+    source = synthizer.Source3D(context)
     source.add_generator(generator)
-    return (buffer, generator, soruce)
+    return (buffer, generator, source)
 
 (buffer, generator, source) = make_source(context, "the_file.wav")
 ```
@@ -251,8 +253,8 @@ def make_source(context, file_path):
 HRTF has to be off by default because we can't detect if the user is using
 headphones.  To enable HRTF:
 
-```
-context.default_panner_strategy = synthizer.PannerStrategy.HRTF
+```python
+context.default_panner_strategy.value = synthizer.PannerStrategy.HRTF
 ```
 
 The main Synthizer manual also explains a lot of other useful stuff about 3D
@@ -298,25 +300,25 @@ with synthizer.initialized(
     # This starts the audio threads.
     ctx = synthizer.Context()
     # Enable HRTF as the default panning strategy before making a source
-    ctx.default_panner_strategy = synthizer.PannerStrategy.HRTF
+    ctx.default_panner_strategy.value = synthizer.PannerStrategy.HRTF
 
     # A BufferGenerator plays back a buffer:
     generator = synthizer.BufferGenerator(ctx)
     # A buffer holds audio data. We read from the specified file:
     buffer = synthizer.Buffer.from_file(sys.argv[1])
     # Tell the generator to use the buffer.
-    generator.buffer = buffer
+    generator.buffer.value = buffer
     # A Source3D is a 3D source, as you'd expect.
     source = synthizer.Source3D(ctx)
     # It'll play the BufferGenerator.
     source.add_generator(generator)
-    # Keep track of looping, since property reads are expensive:
+    # Keep track of looping, since property reads will most likely be out of date with the current actual value:
     looping = False
 
     # A simple command parser.
     while True:
-        cmd = input("Command: ")
-        cmd = cmd.split()
+        text = input("Command: ")
+        cmd = text.split()
         if len(cmd) == 0:
             continue
         if cmd[0] == "pause":
@@ -332,7 +334,7 @@ with synthizer.initialized(
             except ValueError:
                 print("Unable to parse coordinates")
                 continue
-            source.position = (x, y, z)
+            source.position.value = (x, y, z)
         elif cmd[0] == "seek":
             if len(cmd) != 2:
                 print("Syntax: seek <seconds>")
@@ -343,14 +345,14 @@ with synthizer.initialized(
                 print("Unable to parse position")
                 continue
             try:
-                generator.playback_position = pos
+                generator.playback_position.value = pos
             except synthizer.SynthizerError as e:
                 print(e)
         elif cmd[0] == "quit":
             break
         elif cmd[0] == "loop":
             looping = not looping
-            generator.looping = looping
+            generator.looping.value = looping
             print("Looping" if looping else "Not looping")
         elif cmd[0] == "gain":
             if len(cmd) != 2:
@@ -363,7 +365,7 @@ with synthizer.initialized(
                 continue
             # Convert to scalar gain from db.
             gain = 10 ** (value / 20)
-            source.gain = gain
+            source.gain.value = gain
         else:
             print("Unrecognized command")
 ```

@@ -1,12 +1,13 @@
 # Events
 
-Synthizer supports sending events.  Currently, it can send finished and looped
-events for both `BufferGenerator` and `StreamingGenerator`.  This will be
-extended to other objects and concepts in future, as appropriate.  The events
-have the following meanings:
+Synthizer supports sending events.  Currently, it can send the following event
+types:
 
-- Finished: the generator isn't configured to loop and has reached the end.
-- Looped: The generator is configured to loop, and a loop was just completed.
+| Type | Name | Supported Objects | Description |
+|-----------|-----------|--------------------|------------------------------|
+| `FinishedEvent` | finished | `BufferGenerator`, `StreamingGenerator` | the generator isn't configured to loop and has reached the end. |
+| `LoopedEvent` | looped | `BufferGenerator`, `StreamingGenerator` | The generator is configured to loop and a loop was just completed. |
+| `UserAutomationEvent` | user_automation | `AutomationBatch` with specified target | The user specified event triggered at the designated point of the automation timeline. | 
 
 Events are disabled by default and must be enabled.  An additional keyword
 argument `enable_events = True` can be passed to the Context constructor.
@@ -22,12 +23,14 @@ you'll never see it.
 
 Events are exposed as an iterator on the context:
 
-```
+```python
 for event in ctx.get_events():
     if isinstance(e, synthizer.FinishedEvent):
         # Handle finished
     elif isinstance(e, synthizer.LoopedEvent):
-        # process
+        # Handle looped
+    elif isinstance(e, synthizer.UserAutomationEvent):
+        # Handle user automation
 ```
 
 The iterator returned from `get_events` takes an optional argument to limit the
