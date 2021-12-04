@@ -22,8 +22,6 @@ jobs:
         include:
           - os: ubuntu-20.04
             pyversions: "python3.8 python3.9"
-          - os: ubuntu-18.04
-            pyversions: "python3.8"
 
   windows:
     runs-on: windows-2019
