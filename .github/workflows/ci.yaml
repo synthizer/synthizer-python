@@ -115,8 +115,8 @@ jobs:
       matrix:
         ARTIFACT:
           - python-wheels-win32-3.10
-          - python-wheels-win32-3.9
           - python-wheels-win64-3.10
+          - python-wheels-win32-3.9
           - python-wheels-win64-3.9
           - python-wheels-win32-3.8
           - python-wheels-win64-3.8

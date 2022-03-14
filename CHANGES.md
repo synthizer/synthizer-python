@@ -1,3 +1,8 @@
+# 0.12.2 (2022-03-14)
+
+- Add py.typed.
+- Start building wheels for 3.7 and up again.
+
 # 0.12.1 (2021-12-04)
 
 - Build Python 3.10 Windows wheels.
