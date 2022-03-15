@@ -6,7 +6,7 @@ from collections import abc
 from enum import Enum
 import sys
 
-from synthizer_constants cimport *
+from synthizer.synthizer_constants cimport *
 
 
 from cpython.mem cimport PyMem_Malloc, PyMem_Realloc, PyMem_Free
