@@ -56,7 +56,7 @@ extension_args = {
 }
 
 extensions = [
-    Extension("synthizer", ["synthizer/synthizer.pyx"], **extension_args),
+    Extension("synthizer.synthizer", ["synthizer/synthizer.pyx"], **extension_args),
 ]
 
 setup(
@@ -67,7 +67,9 @@ setup(
     url="https://synthizer.github.io",
     ext_modules=cythonize(extensions, language_level=3),
     zip_safe=False,
+    include_package_data=True,
+    packages=["synthizer"],
     package_data={
-        "synthizer": ["*.pyx", "*.pxd", "synthizer.pyi", "py.typed"],
+        "synthizer": ["*.pyx", "*.pxd", "*.pyi", "py.typed"],
     },
 )
