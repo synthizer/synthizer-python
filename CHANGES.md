@@ -1,3 +1,7 @@
+# 0.12.3 (2022-03-22)
+
+- More typing fixes.  This should work now.
+
 # 0.12.2 (2022-03-14)
 
 - Add py.typed.
