@@ -11,3 +11,5 @@ dist
 *.cpp
 *.so
 synthizer-vendored
+venv/
+__pycache__/
