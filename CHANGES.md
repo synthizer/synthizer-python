@@ -1,3 +1,7 @@
+# 0.12.4 (2022-09-24)
+
+- Upgrade Synthizer to 0.11.9.
+
 # 0.12.3 (2022-03-22)
 
 - More typing fixes.  This should work now.
