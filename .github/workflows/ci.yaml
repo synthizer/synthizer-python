@@ -11,7 +11,7 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v2
         with:
-          submodules: true
+          submodules: recursive
       - name: "Build CI"
         run: |
           cd $GITHUB_WORKSPACE
@@ -33,7 +33,7 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v2
         with:
-          submodules: true
+          submodules: recursive
       - name: Cache Pip
         uses: actions/cache@v2
         with:
@@ -68,7 +68,7 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v2
         with:
-          submodules: true
+          submodules: recursive
       - name: Build Python sdist
         run: |
           sudo apt update
