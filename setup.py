@@ -42,6 +42,7 @@ if 'CI_SDIST' not in os.environ:
             "-DCMAKE_BUILD_TYPE=Release",
             "-DCMAKE_MSVC_RUNTIME_LIBRARY=MultiThreaded",
             "-DCMAKE_POSITION_INDEPENDENT_CODE=TRUE",
+            "-DSYZ_INTEGRATING=ON",
         ],
     )
     cmake.make()
