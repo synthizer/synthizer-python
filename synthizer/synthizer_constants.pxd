@@ -77,6 +77,7 @@ cdef extern from "synthizer_constants.h":
         SYZ_P_FILTER_INPUT
         SYZ_P_CURRENT_TIME
         SYZ_P_SUGGESTED_AUTOMATION_TIME
+        SYZ_P_FREQUENCY
 
     cdef enum SYZ_EVENT_TYPES:
         SYZ_EVENT_TYPE_INVALID

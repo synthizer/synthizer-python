@@ -244,3 +244,21 @@ cdef extern from "synthizer.h":
     syz_ErrorCode syz_globalEchoSetTaps(syz_Handle handle, unsigned int n_taps, syz_EchoTapConfig* taps)
 
     syz_ErrorCode syz_createGlobalFdnReverb(syz_Handle* out, syz_Handle context, void* config, void* userdata, syz_UserdataFreeCallback* userdata_free_callback)
+
+    cdef struct syz_SineBankWave:
+        double frequency_mul
+        double phase
+        double gain
+
+    cdef struct syz_SineBankConfig:
+        syz_SineBankWave *waves
+        unsigned long long wave_count
+        double initial_frequency
+
+    void syz_initSineBankConfig(syz_SineBankConfig *cfg)
+
+    syz_ErrorCode syz_createFastSineBankGenerator(syz_Handle *out, syz_Handle context, syz_SineBankConfig *bank_config, void *config, void *userdata, syz_UserdataFreeCallback *userdata_free_callback)
+    syz_ErrorCode syz_createFastSineBankGeneratorSine(syz_Handle *out, syz_Handle context, double initial_frequency, void *config, void *userdata, syz_UserdataFreeCallback *userdata_free_callback);
+    syz_ErrorCode syz_createFastSineBankGeneratorTriangle(syz_Handle *out, syz_Handle context, double initial_frequency, unsigned int partials, void *config, void *userdata, syz_UserdataFreeCallback *userdata_free_callback)
+    syz_ErrorCode syz_createFastSineBankGeneratorSquare(syz_Handle *out, syz_Handle context, double initial_frequency, unsigned int partials, void *config, void *userdata, syz_UserdataFreeCallback *userdata_free_callback);
+    syz_ErrorCode syz_createFastSineBankGeneratorSaw(syz_Handle *out, syz_Handle context, double initial_frequency, unsigned int partials, void *config, void *userdata,                                                           syz_UserdataFreeCallback *userdata_free_callback)
