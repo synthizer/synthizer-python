@@ -21,7 +21,7 @@ jobs:
       matrix:
         include:
           - os: ubuntu-20.04
-            pyversions: "python3.8 python3.9"
+            pyversions: "python3.8 python3.9 python3.10 python3.11"
 
   windows:
     runs-on: windows-2019
@@ -60,7 +60,7 @@ jobs:
       fail-fast: true
       matrix:
         CI_ARCH: ["32", "64"]
-        PYVERSION: ["3.10", "3.9", "3.8", "3.7"]
+        PYVERSION: ["3.11", "3.10", "3.9", "3.8", "3.7"]
 
   python_sdist:
     runs-on: ubuntu-20.04
@@ -114,6 +114,8 @@ jobs:
       max-parallel: 1
       matrix:
         ARTIFACT:
+          - python-wheels-win32-3.11
+          - python-wheels-win64-3.11
           - python-wheels-win32-3.10
           - python-wheels-win64-3.10
           - python-wheels-win32-3.9
