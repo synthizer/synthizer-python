@@ -1125,3 +1125,34 @@ cdef class AutomationBatch(_BaseObject):
 
     def execute(self):
         _checked(syz_automationBatchExecute(self.handle))
+cdef class FastSineBankGenerator(Generator):
+    cdef public DoubleProperty frequency
+
+    def __init__(self, syz_Handle handle):
+        super().__init__(handle)
+        self.frequency = DoubleProperty(self, SYZ_P_FREQUENCY)
+
+cdef class FastSineBankGeneratorSine(FastSineBankGenerator):
+    def __init__(self, context, initial_frequency):
+        cdef syz_Handle handle
+        _checked(syz_createFastSineBankGeneratorSine(&handle, context._get_handle(), initial_frequency, NULL, NULL, NULL))
+        super().__init__(handle)
+
+cdef class FastSineBankGeneratorTriangle(FastSineBankGenerator):
+    def __init__(self, context, initial_frequency, partials):
+        cdef syz_Handle handle
+        _checked(syz_createFastSineBankGeneratorTriangle(&handle, context._get_handle(), initial_frequency, partials, NULL, NULL, NULL))
+        super().__init__(handle)
+
+cdef class FastSineBankGeneratorSquare(FastSineBankGenerator):
+    def __init__(self, context, initial_frequency, partials):
+        cdef syz_Handle handle
+        _checked(syz_createFastSineBankGeneratorSquare(&handle, context._get_handle(), initial_frequency, partials, NULL, NULL, NULL))
+        super().__init__(handle)
+
+cdef class FastSineBankGeneratorSaw(FastSineBankGenerator):
+    def __init__(self, context, initial_frequency, partials):
+        cdef syz_Handle handle
+        _checked(syz_createFastSineBankGeneratorSaw(&handle, context._get_handle(), initial_frequency, partials, NULL, NULL, NULL))
+        super().__init__(handle)
+
