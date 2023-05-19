@@ -284,6 +284,13 @@ class AutomationBatch:
 
 class SynthizerError(Exception): ...
 
+class SineBankWave:
+    frequency_mul: float
+    phase: float
+    gain: float
+
+    def __init__(self, frequency_mul: float, phase: float, gain: float): ...
+
 class FastSineBankGenerator(Generator):
     frequency: DoubleProperty = ...
 
@@ -298,3 +305,6 @@ class FastSineBankGenerator(Generator):
 
     @staticmethod
     def create_sawtooth_wave_generator(context: Context, initial_frequency: float, partials: float) -> "FastSineBankGenerator": ...
+
+    @staticmethod
+    def create_from_custom_waves(context: Context, waves: List[SineBankWave]) -> "FastSineBankGenerator": ...

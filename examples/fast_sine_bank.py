@@ -37,6 +37,13 @@ with synthizer.initialized(
     generator = synthizer.FastSineBankGenerator.create_sawtooth_wave_generator(ctx, 300.0, 10.0)
     source.add_generator(generator)
     drive_generator(generator)
+    generator.dec_ref()
+
+    print("custom wave")
+    wave = synthizer.SineBankWave(1.0, 0.0, 1.0)
+    generator = synthizer.FastSineBankGenerator.create_from_custom_waves(ctx, [wave])
+    source.add_generator(generator)
+    drive_generator(generator)
 
     source.dec_ref()
     generator.dec_ref()
