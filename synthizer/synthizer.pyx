@@ -1132,27 +1132,26 @@ cdef class FastSineBankGenerator(Generator):
         super().__init__(handle)
         self.frequency = DoubleProperty(self, SYZ_P_FREQUENCY)
 
-cdef class FastSineBankGeneratorSine(FastSineBankGenerator):
-    def __init__(self, context, initial_frequency):
+    @staticmethod
+    def create_sine_wave_generator(context, initial_frequency):
         cdef syz_Handle handle
         _checked(syz_createFastSineBankGeneratorSine(&handle, context._get_handle(), initial_frequency, NULL, NULL, NULL))
-        super().__init__(handle)
+        return FastSineBankGenerator(handle)
 
-cdef class FastSineBankGeneratorTriangle(FastSineBankGenerator):
-    def __init__(self, context, initial_frequency, partials):
+    @staticmethod
+    def create_triangle_wave_generator(context, initial_frequency, partials):
         cdef syz_Handle handle
         _checked(syz_createFastSineBankGeneratorTriangle(&handle, context._get_handle(), initial_frequency, partials, NULL, NULL, NULL))
-        super().__init__(handle)
+        return FastSineBankGenerator(handle)
 
-cdef class FastSineBankGeneratorSquare(FastSineBankGenerator):
-    def __init__(self, context, initial_frequency, partials):
+    @staticmethod
+    def create_square_wave_generator(context, initial_frequency, partials):
         cdef syz_Handle handle
         _checked(syz_createFastSineBankGeneratorSquare(&handle, context._get_handle(), initial_frequency, partials, NULL, NULL, NULL))
-        super().__init__(handle)
+        return FastSineBankGenerator(handle)
 
-cdef class FastSineBankGeneratorSaw(FastSineBankGenerator):
-    def __init__(self, context, initial_frequency, partials):
+    @staticmethod
+    def create_sawtooth_wave_generator(context, initial_frequency, partials):
         cdef syz_Handle handle
         _checked(syz_createFastSineBankGeneratorSaw(&handle, context._get_handle(), initial_frequency, partials, NULL, NULL, NULL))
-        super().__init__(handle)
-
+        return FastSineBankGenerator(handle)
