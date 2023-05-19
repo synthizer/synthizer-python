@@ -1125,6 +1125,17 @@ cdef class AutomationBatch(_BaseObject):
 
     def execute(self):
         _checked(syz_automationBatchExecute(self.handle))
+
+cdef class SineBankWave:
+    cdef public double frequency_mul
+    cdef public double phase
+    cdef public double gain
+
+    def __init__(self, frequency_mul, phase, gain):
+        self.frequency_mul = frequency_mul
+        self.phase = phase
+        self.gain = gain
+
 cdef class FastSineBankGenerator(Generator):
     cdef public DoubleProperty frequency
 
@@ -1155,3 +1166,30 @@ cdef class FastSineBankGenerator(Generator):
         cdef syz_Handle handle
         _checked(syz_createFastSineBankGeneratorSaw(&handle, context._get_handle(), initial_frequency, partials, NULL, NULL, NULL))
         return FastSineBankGenerator(handle)
+
+    @staticmethod
+    def create_from_custom_waves(context, waves):
+        if not waves:
+            raise ValueError("Empty list of waves")
+
+        cdef Py_ssize_t n_waves = len(waves)
+        cdef syz_SineBankConfig config
+        cdef syz_Handle handle
+        cdef syz_SineBankWave *c_waves = <syz_SineBankWave *>PyMem_Malloc(n_waves * sizeof(syz_SineBankWave))
+
+        try:
+            if not c_waves:
+                raise MemoryError()
+
+            for i in range(n_waves):
+                c_waves[i].frequency_mul = waves[i].frequency_mul
+                c_waves[i].phase = waves[i].phase
+                c_waves[i].gain = waves[i].gain
+
+            config.waves = c_waves
+            config.wave_count = n_waves
+            _checked(syz_createFastSineBankGenerator(&handle, context._get_handle(), &config, NULL, NULL, NULL))
+            return FastSineBankGenerator(handle)
+        finally:
+            PyMem_Free(c_waves)
+
