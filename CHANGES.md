@@ -1,3 +1,10 @@
+# 0.12.6 (2023-05-20)
+
+- Bind the sine generators
+- Start building Python 3.11 wheels
+- Update Synthizer so that setting positions or orientations to values
+  containing NaN will error.
+
 # 0.12.4 (2022-09-24)
 
 - Upgrade Synthizer to 0.11.9.
