@@ -272,7 +272,7 @@ cdef _handle_to_object(handle):
     with _objects_by_handle_mutex:
         return _objects_by_handle.get(handle, None)
 
-cdef void userdataFree(void *userdata) with gil:
+cdef void userdataFree(void *userdata) noexcept with gil:
     Py_DECREF(<object>userdata)
 
 
@@ -512,7 +512,7 @@ cdef class WrappedStream:
         self.stream = stream
         self.last_err = None
 
-cdef int custom_stream_read_cb(unsigned long long *wrote, unsigned long long requested, char *destination, void *userdata, const char **err_msg) with gil:
+cdef int custom_stream_read_cb(unsigned long long *wrote, unsigned long long requested, char *destination, void *userdata, const char **err_msg) noexcept with gil:
     cdef WrappedStream obj = <WrappedStream>userdata
     cdef stream = obj.stream
     cdef object read_data
@@ -530,7 +530,7 @@ cdef int custom_stream_read_cb(unsigned long long *wrote, unsigned long long req
         memcpy(destination, &out_view[0], out_view.shape[0])
     return 0
 
-cdef int custom_stream_seek_cb(unsigned long long pos, void *userdata, const char **err_msg) with gil:
+cdef int custom_stream_seek_cb(unsigned long long pos, void *userdata, const char **err_msg) noexcept with gil:
     cdef WrappedStream obj = <WrappedStream>userdata
     cdef stream = obj.stream
     try:
@@ -542,7 +542,7 @@ cdef int custom_stream_seek_cb(unsigned long long pos, void *userdata, const cha
         return 1
     return 0
 
-cdef int custom_stream_close_cb(void *userdata, const char **err_msg) with gil:
+cdef int custom_stream_close_cb(void *userdata, const char **err_msg) noexcept with gil:
     cdef WrappedStream obj = <WrappedStream>userdata
     cdef stream = obj.stream
     try:
@@ -555,7 +555,7 @@ cdef int custom_stream_close_cb(void *userdata, const char **err_msg) with gil:
         err_msg[0] = obj.last_err
     return 0
 
-cdef void custom_stream_destroy_cb(void *userdata) with gil:
+cdef void custom_stream_destroy_cb(void *userdata) noexcept with gil:
     Py_DECREF(<object>userdata)
 
 cdef custom_stream_fillout_callbacks(syz_CustomStreamDef *callbacks, object stream):
@@ -583,7 +583,7 @@ cdef custom_stream_fillout_callbacks(syz_CustomStreamDef *callbacks, object stre
 # from opening custom streams around long enough to communicate the error to the caller.
 cdef object last_custom_stream_open_error = threading.local()
 
-cdef int custom_stream_open_cb(syz_CustomStreamDef *callbacks, const char *protocol, const char *path, void *param, void *userdata, const char **err_msg) with gil:
+cdef int custom_stream_open_cb(syz_CustomStreamDef *callbacks, const char *protocol, const char *path, void *param, void *userdata, const char **err_msg) noexcept with gil:
     cdef object obj = <object>userdata
     cdef object stream = None
     cdef object length_getter = None

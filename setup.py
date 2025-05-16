@@ -40,7 +40,8 @@ if 'CI_SDIST' not in os.environ:
         generator_name="Ninja",
         clargs=[
             "-DCMAKE_BUILD_TYPE=Release",
-            "-DCMAKE_MSVC_RUNTIME_LIBRARY=MultiThreaded",
+            "-DCMAKE_MSVC_RUNTIME_LIBRARY=MultiThreadedDLL",
+            "-DSYZ_STATIC_RUNTIME=OFF",                     # Aggiunta!
             "-DCMAKE_POSITION_INDEPENDENT_CODE=TRUE",
             "-DSYZ_INTEGRATING=ON",
         ],
